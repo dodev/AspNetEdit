@@ -36,9 +36,10 @@ using System.Collections.Generic;
 
 using MonoDevelop.Ide;
 using MonoDevelop.Projects;
-using MonoDevelop.Projects.Dom;
-using MonoDevelop.Projects.Dom.Parser;
+//using MonoDevelop.Projects.Dom;
+//using MonoDevelop.Projects.Dom.Parser;
 using MonoDevelop.DesignerSupport;
+using ICSharpCode.NRefactory.TypeSystem;
 
 namespace AspNetEdit.Integration
 {
@@ -50,6 +51,8 @@ namespace AspNetEdit.Integration
 		
 		public MonoDevelopProxy (Project project, string className)
 		{
+			// TODO: get code behind class name from AspNetEditViewContent
+			
 			this.className = string.IsNullOrEmpty (className)? null : className;
 			this.project = project;
 		}
@@ -77,55 +80,63 @@ namespace AspNetEdit.Integration
 		
 		IType GetNonDesignerClass ()
 		{
-			ProjectDom ctx;
-			IType cls = GetFullClass (out ctx);
-			IType nonDesigner = MonoDevelop.DesignerSupport.CodeBehind.GetNonDesignerClass (cls);
-			return nonDesigner ?? cls;
+			//ProjectDom ctx;
+			IType cls = GetFullClass (/*out ctx*/);
+			IType nonDesigner = (IType)MonoDevelop.DesignerSupport.CodeBehind.GetNonDesignerClass (cls);
+			//return nonDesigner ?? cls;
+			// WARNING: TEMP FIX. The method is not useable, yet!!!
+			return null;
 		}
 		
-		IType GetFullClass (out ProjectDom ctx)
+		IType GetFullClass (/*out ProjectDom ctx*/) // Projects.Dom has been dropped
 		{
 			if (project == null || className == null) {
-				ctx = null;
+				//	ctx = null;
 				return null;
 			}
-			ctx = MonoDevelop.Projects.Dom.Parser.ProjectDomService.GetProjectDom (project);
-			return ctx.GetType (className, false, false);
+			//FIXME: using obsolete parser
+			//ctx = MonoDevelop.Projects.Dom.Parser.ProjectDomService.GetProjectDom (project);
+			//return ctx.GetType (className, false, false);
+			// WARNING: TEMP FIX. The method is not useable, yet!!!
+			return null;
 		}
 		
 		public bool IdentifierExistsInCodeBehind (string trialIdentifier)
 		{
-			ProjectDom ctx;
-			IType fullClass = GetFullClass (out ctx);
+			//ProjectDom ctx;
+			IType fullClass = GetFullClass (/*out ctx*/);
 			if (fullClass == null)
 				return false;
 			
-			return BindingService.IdentifierExistsInClass (ctx, fullClass, trialIdentifier);
+			//return BindingService.IdentifierExistsInClass (ctx, fullClass, trialIdentifier);
+			return BindingService.IdentifierExistsInClass (fullClass, trialIdentifier);
 		}
 		
 		public string GenerateIdentifierUniqueInCodeBehind (string trialIdentifier)
 		{
-			ProjectDom ctx;
-			IType fullClass = GetFullClass (out ctx);
+			//ProjectDom ctx;
+			IType fullClass = GetFullClass (/*out ctx*/);
 			if (fullClass == null)
 				return trialIdentifier;
 			
-			return BindingService.GenerateIdentifierUniqueInClass (ctx, fullClass, trialIdentifier);
+			//return BindingService.GenerateIdentifierUniqueInClass (ctx, fullClass, trialIdentifier);
+			return BindingService.GenerateIdentifierUniqueInClass (fullClass, trialIdentifier);
 		}
 		
 		
 		public string[] GetCompatibleMethodsInCodeBehind (CodeMemberMethod method)
 		{
-			ProjectDom ctx;
-			IType fullClass = GetFullClass (out ctx);
+			//ProjectDom ctx;
+			IType fullClass = GetFullClass (/*out ctx*/);
 			if (fullClass == null)
 				return new string[0];
 			
-			IMethod MDMeth = BindingService.CodeDomToMDDomMethod (method);
+			IMethod MDMeth = (IMethod)BindingService.CodeDomToMDDomMethod (method);
 			if (MDMeth == null)
 				return null;
-			
-			List<IMethod> compatMeth = new List<IMethod> (BindingService.GetCompatibleMethodsInClass (ctx, fullClass, MDMeth));
+			//FIXME: argument list mismatch
+			//List<IMethod> compatMeth = new List<IMethod> (BindingService.GetCompatibleMethodsInClass (ctx, fullClass, MDMeth));
+			List<IMethod> compatMeth = new List<IMethod> (BindingService.GetCompatibleMethodsInClass (fullClass, MDMeth));
 			string[] names = new string[compatMeth.Count];
 			for (int i = 0; i < names.Length; i++)
 				names[i] = compatMeth[i].Name;
@@ -134,15 +145,16 @@ namespace AspNetEdit.Integration
 		
 		public bool ShowMethod (CodeMemberMethod method)
 		{
-			ProjectDom ctx;
-			IType fullCls = GetFullClass (out ctx);
+			//ProjectDom ctx;
+			IType fullCls = GetFullClass (/*out ctx*/);
 			if (fullCls == null)
 				return false;
+			// FIXME: operator ?? type mismatch
+			//IType codeBehindClass = MonoDevelop.DesignerSupport.CodeBehind.GetNonDesignerClass (fullCls) ?? fullCls;
 			
-			IType codeBehindClass = MonoDevelop.DesignerSupport.CodeBehind.GetNonDesignerClass (fullCls) ?? fullCls;
 			
 			Gtk.Application.Invoke ( delegate {
-				BindingService.CreateAndShowMember (project, fullCls, codeBehindClass, method);
+				//BindingService.CreateAndShowMember (project, fullCls, codeBehindClass, method); //FIXME: new arguments list
 			});
 			
 			return true;
@@ -154,8 +166,8 @@ namespace AspNetEdit.Integration
 			if (codeBehindClass == null)
 				return false;
 			
-			Gtk.Application.Invoke ( delegate {
-				IdeApp.Workbench.OpenDocument (codeBehindClass.CompilationUnit.FileName, lineNumber, 1, true);
+			Gtk.Application.Invoke (delegate {
+				//IdeApp.Workbench.OpenDocument (codeBehindClass.CompilationUnit.FileName, lineNumber, 1, true);//FIXME: new arguments list
 			});
 			
 			return true;

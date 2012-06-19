@@ -185,15 +185,17 @@ namespace AspNetEdit.Integration
 			if (viewContent.Project != null) {
 				string mimeType = DesktopService.GetMimeTypeForUri (viewContent.ContentName);
 				
-				var cu = MonoDevelop.Projects.Dom.Parser.ProjectDomService.Parse (viewContent.Project, viewContent.ContentName)
-					as MonoDevelop.AspNet.Parser.AspNetParsedDocument;
+				// TODO: get code behind class name
+				//FIXME: using an obsolete(non-existing) parser
+				//var cu = MonoDevelop.Projects.Dom.Parser.ProjectDomService.Parse (viewContent.Project, viewContent.ContentName)
+				//	as MonoDevelop.AspNet.Parser.AspNetParsedDocument;
 					
-				if (cu != null && cu.PageInfo != null && !string.IsNullOrEmpty (cu.PageInfo.InheritedClass))
-					codeBehind = cu.PageInfo.InheritedClass;
+				//if (cu != null && cu.PageInfo != null && !string.IsNullOrEmpty (cu.PageInfo.InheritedClass))
+				//	codeBehind = cu.PageInfo.InheritedClass;
 			}
 			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
 			
-			ITextBuffer textBuf = (ITextBuffer) viewContent.GetContent (typeof(ITextBuffer));			
+			ITextBuffer textBuf = (ITextBuffer) viewContent.GetContent<ITextBuffer> ();			
 			editorProcess.Initialise (proxy, textBuf.Text, viewContent.ContentName);
 			
 			activated = true;
@@ -216,7 +218,7 @@ namespace AspNetEdit.Integration
 		void saveDocumentToTextView ()
 		{
 			if (editorProcess != null && !editorProcess.ExceptionOccurred) {
-				IEditableTextBuffer textBuf = (IEditableTextBuffer) viewContent.GetContent (typeof(IEditableTextBuffer));
+				IEditableTextBuffer textBuf = (IEditableTextBuffer) viewContent.GetContent<IEditableTextBuffer> ();
 				
 				string doc = null;
 				try {
