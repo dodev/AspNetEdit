@@ -36,6 +36,10 @@ using System.ComponentModel;
 using Gtk;
 
 using Mono.Addins;
+using MonoDevelop.AspNet;
+using MonoDevelop.AspNet.Parser;
+using MonoDevelop.AspNet.Parser.Dom;
+using MonoDevelop.AspNet.Parser.Internal;
 using MonoDevelop.Ide.Gui;
 using MonoDevelop.Ide.Gui.Content;
 using MonoDevelop.Core;
@@ -167,35 +171,42 @@ namespace AspNetEdit.Integration
 			propGridSocket.Show ();
 			propertyFrame.Add (propGridSocket);
 			
-			editorProcess = (EditorProcess) Runtime.ProcessService.CreateExternalProcessObject (typeof (EditorProcess), false);
+			editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
 			
 			if (designerSocket.IsRealized)
 				editorProcess.AttachDesigner (designerSocket.Id);
 			if (propGridSocket.IsRealized)
 				editorProcess.AttachPropertyGrid (propGridSocket.Id);
 			
-			designerSocket.Realized += delegate { editorProcess.AttachDesigner (designerSocket.Id); };
-			propGridSocket.Realized += delegate { editorProcess.AttachPropertyGrid (propGridSocket.Id); };
+			designerSocket.Realized += delegate {
+				editorProcess.AttachDesigner (designerSocket.Id);
+			};
+			propGridSocket.Realized += delegate {
+				editorProcess.AttachPropertyGrid (propGridSocket.Id);
+			};
 			
 			//designerSocket.FocusOutEvent += delegate {
 			//	MonoDevelop.DesignerSupport.DesignerSupport.Service.PropertyPad.BlankPad (); };
+			
+			ITextBuffer textBuf = (ITextBuffer)viewContent.GetContent<ITextBuffer> ();		
 			
 			//hook up proxy for event binding
 			string codeBehind = null;
 			if (viewContent.Project != null) {
 				string mimeType = DesktopService.GetMimeTypeForUri (viewContent.ContentName);
 				
-				// TODO: get code behind class name
-				//FIXME: using an obsolete(non-existing) parser
-				//var cu = MonoDevelop.Projects.Dom.Parser.ProjectDomService.Parse (viewContent.Project, viewContent.ContentName)
-				//	as MonoDevelop.AspNet.Parser.AspNetParsedDocument;
+				using (StringReader reader = new StringReader (textBuf.Text)) {
+					AspNetParser parser = new AspNetParser ();
+					AspNetParsedDocument cu = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project) 
+						as AspNetParsedDocument;
 					
-				//if (cu != null && cu.PageInfo != null && !string.IsNullOrEmpty (cu.PageInfo.InheritedClass))
-				//	codeBehind = cu.PageInfo.InheritedClass;
+					// FIXME: cu doesn't contain PageInfo property ?!
+					if (cu != null && cu.PageInfo != null && !string.IsNullOrEmpty (cu.PageInfo.InheritedClass))
+						codeBehind = cu.PageInfo.InheritedClass;
+				}
 			}
 			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
 			
-			ITextBuffer textBuf = (ITextBuffer) viewContent.GetContent<ITextBuffer> ();			
 			editorProcess.Initialise (proxy, textBuf.Text, viewContent.ContentName);
 			
 			activated = true;

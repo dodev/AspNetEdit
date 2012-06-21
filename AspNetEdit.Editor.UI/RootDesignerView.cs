@@ -189,7 +189,7 @@ namespace AspNetEdit.Editor.UI
 			throw new NotImplementedException ("Renaming controls not supported yet");
 		}
 		
-		internal new string GetDocument ()
+		internal string GetDocument ()
 		{
 			comm.JSCall (GeckoFunctions.GetPage, "DocumentReturn", null);
 			
