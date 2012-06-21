@@ -38,6 +38,8 @@ using System.ComponentModel.Design;
 using System.Web.UI;
 using System.Web.UI.Design;
 
+using MonoDevelop.AspNet.Parser;
+
 namespace AspNetEdit.Editor.Persistence
 {
 	public sealed class ControlPersister
@@ -136,7 +138,7 @@ namespace AspNetEdit.Editor.Persistence
 		private static void PersistObject (HtmlTextWriter writer, object control, IDesignerHost host, bool runAtServer)
 		{
 			//look up tag prefix from host
-			IWebFormReferenceManager refMan = host.GetService (typeof (IWebFormReferenceManager)) as IWebFormReferenceManager;
+			WebFormReferenceManager refMan = host.GetService (typeof (WebFormReferenceManager)) as WebFormReferenceManager;
 			if (refMan == null)
 				throw new Exception("Could not obtain IWebFormReferenceManager service");
 			string prefix = refMan.GetTagPrefix (control.GetType ());

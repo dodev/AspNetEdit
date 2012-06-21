@@ -38,14 +38,15 @@ using System.Globalization;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
-	public class WebFormReferenceManager : IWebFormReferenceManager
+	// Obsolete. In the project was used MonoDevelop.AspNet.Parser.WebReferenceManager
+	public class ObsoleteWebFormReferenceManager : IWebFormReferenceManager
 	{
 		private DesignerHost host;
 		private ITypeResolutionService typeRes;
 		private int prefixIndex = 1;
 
 		//TODO: Some way to reset this when host is reset 
-		public WebFormReferenceManager (DesignerHost host)
+		public ObsoleteWebFormReferenceManager (DesignerHost host)
 		{
 			if (host == null)
 				throw new ArgumentNullException ("host");
@@ -107,7 +108,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			if (type.Assembly == typeof(System.Web.UI.WebControls.WebControl).Assembly)
 				return;
-			if (type.Assembly == typeof(WebFormReferenceManager).Assembly)
+			if (type.Assembly == typeof(ObsoleteWebFormReferenceManager).Assembly)
 				return;
 
 			string prefix = null;

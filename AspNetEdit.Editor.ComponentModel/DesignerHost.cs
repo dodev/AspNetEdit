@@ -38,7 +38,9 @@ using System.Drawing.Design;
 using System.IO;
 using System.Web.UI;
 using System.Web.UI.Design;
-using AspNetEdit.Editor.Persistence;
+
+using MonoDevelop.AspNet;
+using MonoDevelop.AspNet.Parser;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -51,12 +53,12 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
-			referenceManager = new WebFormReferenceManager (this);
+			referenceManager = new WebFormReferenceManager (new AspNetAppProject());
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
 			parentServices.AddService (typeof (IComponentChangeService), container);
-			parentServices.AddService (typeof (IWebFormReferenceManager), referenceManager);		
+			parentServices.AddService (typeof (WebFormReferenceManager), referenceManager);		
 		}
 
 		public WebFormReferenceManager WebFormReferenceManager

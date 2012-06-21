@@ -36,6 +36,7 @@ using System.ComponentModel.Design;
 
 using MonoDevelop.AspNet.Parser.Internal;
 using MonoDevelop.AspNet.Parser.Dom;
+using MonoDevelop.AspNet.Parser;
 
 namespace AspNetEdit.Editor.Persistence
 {
@@ -54,7 +55,7 @@ namespace AspNetEdit.Editor.Persistence
 			
 		}
 
-		protected virtual IWebFormReferenceManager WebFormReferenceManager
+		protected virtual WebFormReferenceManager WebFormReferenceManager
 		{
 			get { return parent.WebFormReferenceManager; }
 		}

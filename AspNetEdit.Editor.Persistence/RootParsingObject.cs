@@ -35,20 +35,22 @@ using System.Web.UI;
 using System.Collections;
 using System.ComponentModel.Design;
 
+using MonoDevelop.AspNet.Parser;
+
 namespace AspNetEdit.Editor.Persistence
 {
 	internal class RootParsingObject : HtmlParsingObject
 	{
 		private StringBuilder stringBuilder = new StringBuilder ();
 		private ArrayList controls = new ArrayList ();
-		private IWebFormReferenceManager refMan;
+		private WebFormReferenceManager refMan;
 		private IDesignerHost host;
 
 		public RootParsingObject (IDesignerHost host)
 			: base ("", "", null)
 		{
 			this.host = host;
-			refMan = host.GetService(typeof(IWebFormReferenceManager)) as IWebFormReferenceManager;
+			refMan = host.GetService(typeof(WebFormReferenceManager)) as WebFormReferenceManager;
 			if (refMan == null)
 				throw new Exception ("Could not get IWebFormReferenceManager from host");
 		}
@@ -69,7 +71,7 @@ namespace AspNetEdit.Editor.Persistence
 			documentText = stringBuilder.ToString ();
 		}
 		
-		protected override IWebFormReferenceManager WebFormReferenceManager
+		protected override WebFormReferenceManager WebFormReferenceManager
 		{
 			get { return refMan; }
 		}

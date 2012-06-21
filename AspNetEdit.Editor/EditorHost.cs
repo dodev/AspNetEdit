@@ -38,6 +38,7 @@ using System.ComponentModel.Design.Serialization;
 using MonoDevelop.Ide;
 using MonoDevelop.Ide.Gui;
 using MonoDevelop.DesignerSupport.Toolbox;
+using MonoDevelop.AspNet.Parser;
 
 using AspNetEdit.Editor.ComponentModel;
 using AspNetEdit.Editor.UI;
@@ -145,7 +146,7 @@ namespace AspNetEdit.Editor
 					//if it's present
 					if (tda != null && tda.Data.Length > 0) {
 						//look up the tag's prefix and insert it into the data						
-						System.Web.UI.Design.IWebFormReferenceManager webRef = host.GetService (typeof (System.Web.UI.Design.IWebFormReferenceManager)) as System.Web.UI.Design.IWebFormReferenceManager;
+						WebFormReferenceManager webRef = host.GetService (typeof (WebFormReferenceManager)) as WebFormReferenceManager;
 						if (webRef == null)
 							throw new Exception("Host does not provide an IWebFormReferenceManager");
 						string aspText = String.Format (tda.Data, webRef.GetTagPrefix (controlType));
