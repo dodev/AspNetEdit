@@ -199,10 +199,9 @@ namespace AspNetEdit.Integration
 					AspNetParser parser = new AspNetParser ();
 					AspNetParsedDocument cu = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project) 
 						as AspNetParsedDocument;
-					
-					// FIXME: cu doesn't contain PageInfo property ?!
-					if (cu != null && cu.PageInfo != null && !string.IsNullOrEmpty (cu.PageInfo.InheritedClass))
-						codeBehind = cu.PageInfo.InheritedClass;
+
+					if (cu != null && cu.Info != null && !string.IsNullOrEmpty (cu.Info.InheritedClass))
+						codeBehind = cu.Info.InheritedClass;
 				}
 			}
 			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
