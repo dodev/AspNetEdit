@@ -50,11 +50,10 @@ namespace AspNetEdit.Integration
 		string className;
 		
 		public MonoDevelopProxy (Project project, string className)
-		{
-			// TODO: get code behind class name from AspNetEditViewContent
-			
+		{			
 			this.className = string.IsNullOrEmpty (className)? null : className;
 			this.project = project;
+			// TODO: get IType for the class
 		}
 		
 		//keep this object available through remoting
@@ -98,6 +97,7 @@ namespace AspNetEdit.Integration
 			//ctx = MonoDevelop.Projects.Dom.Parser.ProjectDomService.GetProjectDom (project);
 			//return ctx.GetType (className, false, false);
 			// WARNING: TEMP FIX. The method is not useable, yet!!!
+			
 			return null;
 		}
 		

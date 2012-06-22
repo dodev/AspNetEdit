@@ -53,6 +53,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
+			// FIXME: use AspNetAppProject for the current project
 			referenceManager = new WebFormReferenceManager (new AspNetAppProject());
 
 			//register services

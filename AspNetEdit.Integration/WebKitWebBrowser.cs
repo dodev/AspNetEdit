@@ -28,14 +28,14 @@
 
 using System;
 using System.IO;
-using Gecko;
+//using Gecko; TODO: re-implement the wrapper for WebKit
 
 using MonoDevelop.Ide.WebBrowser;
 
 namespace AspNetEdit.Integration
 {
 	
-	public class GeckoWebBrowser : WebControl, IWebBrowser
+	public class WebKitWebBrowser : /*WebControl,*/Gtk.Frame, IWebBrowser // Showing a blank frame for now TODO: implement the WebView Widget
 	{
 		string delayedUrl;
 		string oldTempFile;
@@ -43,8 +43,9 @@ namespace AspNetEdit.Integration
 		
 		bool suppressLinkClickedBecauseCausedByLoadUrlCall = false;
 		
-		public GeckoWebBrowser ()
+		public WebKitWebBrowser ()
 		{
+			/* TODO: Reimplement the interface
 			WebControl.SetProfilePath ("/tmp", "MonoDevelop");
 			
 			//FIXME: On{Event} doesn't fire
@@ -67,6 +68,7 @@ namespace AspNetEdit.Integration
 			this.TitleChange += delegate {
 				OnTitleChanged ();
 			};
+			*/
 		}
 		
 		//FIXME: OnExposeEvent doesn't fire, but ExposeEvent does
@@ -76,7 +78,7 @@ namespace AspNetEdit.Integration
 				realLoadUrl (delayedUrl);
 				delayedUrl = null;
 			}
-			
+			/* dodev: Hopefully this bug won't be present with WebKit#
 			//FIXME: suppress a strange bug with control not getting drawn first time it's shown, or when docking changed.
 			//For some reason this event only fires when control 'appears' or is re-docked, which corresponds 1:1 to the bug.
 			if (!reShown) {
@@ -87,8 +89,43 @@ namespace AspNetEdit.Integration
 				reShown = true;
 				GLib.Timeout.Add (1000, delegate { reShown = false; return false; } );
 			}
+			*/
 		}
 		
+		void realLoadUrl (string url)
+		{
+			if (url == null)
+				throw new ArgumentNullException ("url");
+			/*
+			if (!this.IsRealized) {
+				delayedUrl = url;
+				return;
+			}
+			
+			if (url == delayedUrl) {
+				delayedUrl = null;
+			}
+			
+			if (oldTempFile != null) {
+				try {
+					File.Delete (oldTempFile);
+				} catch (Exception ex) {
+					MonoDevelop.Core.LoggingService.LogError ("Could not delete temp file '{0}'\n{1]", oldTempFile, ex.ToString ());
+				}
+				oldTempFile = null;
+			}
+			
+			suppressLinkClickedBecauseCausedByLoadUrlCall = true;
+			
+			if (url.StartsWith ("tempfile://")) {
+				oldTempFile = url.Substring (11);
+				//base.LoadUrl (oldTempFile);
+			} else {
+				//base.LoadUrl (url);
+			}
+			*/
+		}
+		/*
 		string IWebBrowser.Title {
 			get { return base.Title; }
 		}
@@ -146,38 +183,7 @@ namespace AspNetEdit.Integration
 			realLoadUrl ("tempfile://" + tempFile);
 		}
 		
-		void realLoadUrl (string url)
-		{
-			if (url == null)
-				throw new ArgumentNullException ("url");
-			
-			if (!this.IsRealized) {
-				delayedUrl = url;
-				return;
-			}
-			
-			if (url == delayedUrl) {
-				delayedUrl = null;
-			}
-			
-			if (oldTempFile != null) {
-				try {
-					File.Delete (oldTempFile);
-				} catch (Exception ex) {
-					MonoDevelop.Core.LoggingService.LogError ("Could not delete temp file '{0}'\n{1]", oldTempFile, ex.ToString ());
-				}
-				oldTempFile = null;
-			}
-			
-			suppressLinkClickedBecauseCausedByLoadUrlCall = true;
-			
-			if (url.StartsWith ("tempfile://")) {
-				oldTempFile = url.Substring (11);
-				base.LoadUrl (oldTempFile);
-			} else {
-				base.LoadUrl (url);
-			}
-		}
+		
 		
 		void IWebBrowser.Reload ()
 		{
@@ -188,6 +194,81 @@ namespace AspNetEdit.Integration
 		{
 			base.StopLoad ();
 		}
+		*/
+		
+		
+		// TODO: IMplement the IWebBrowserInterface
+		#region IWebBrowser implementation
+		public event EventHandler NetStart;
+
+		public event EventHandler NetStop;
+
+		public void GoForward ()
+		{
+			throw new System.NotImplementedException ();
+		}
+
+		public void GoBack ()
+		{
+			throw new System.NotImplementedException ();
+		}
+
+		public void LoadUrl (string url)
+		{
+			throw new System.NotImplementedException ();
+		}
+
+		public void LoadHtml (string html)
+		{
+			throw new System.NotImplementedException ();
+		}
+
+		public void Reload ()
+		{
+			throw new System.NotImplementedException ();
+		}
+
+		public void StopLoad ()
+		{
+			throw new System.NotImplementedException ();
+		}
+
+		public string Title {
+			get {
+				throw new System.NotImplementedException ();
+			}
+		}
+
+		public string JSStatus {
+			get {
+				throw new System.NotImplementedException ();
+			}
+		}
+
+		public string Location {
+			get {
+				throw new System.NotImplementedException ();
+			}
+		}
+
+		public string LinkStatus {
+			get {
+				throw new System.NotImplementedException ();
+			}
+		}
+
+		public bool CanGoBack {
+			get {
+				throw new System.NotImplementedException ();
+			}
+		}
+
+		public bool CanGoForward {
+			get {
+				throw new System.NotImplementedException ();
+			}
+		}
+		#endregion
 		
 		public event PageLoadedHandler PageLoaded;
 		public event LocationChangingHandler LocationChanging;
@@ -230,22 +311,28 @@ namespace AspNetEdit.Integration
 				LoadingProgressChanged (this, new LoadingProgressChangedEventArgs (progress));
 		}
 		
+		// TODO: Reimplement some of the event firing methods
 		protected virtual void OnJSStatusChanged ()
 		{
 			if (JSStatusChanged != null)
-				JSStatusChanged (this, new StatusMessageChangedEventArgs (base.JsStatus));
+				JSStatusChanged (this, new StatusMessageChangedEventArgs (null/*base.JsStatus*/));
 		}
 		
 		protected virtual void OnLinkStatusChanged ()
 		{
 			if (LinkStatusChanged != null)
-				LinkStatusChanged (this, new StatusMessageChangedEventArgs (base.LinkMessage));
+				LinkStatusChanged (this, new StatusMessageChangedEventArgs (null/*base.LinkMessage*/));
 		}
 		
 		protected virtual void OnTitleChanged ()
 		{
 			if (TitleChanged != null)
-				TitleChanged (this, new TitleChangedEventArgs (base.Title));
+				TitleChanged (this, new TitleChangedEventArgs (null /*base.Title*/));
+		}
+		
+		public virtual void Destroy ()
+		{
+			// TODO: Dispose the WebBrowser Widget instance
 		}
 	}
 }

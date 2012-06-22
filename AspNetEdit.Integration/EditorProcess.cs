@@ -52,7 +52,7 @@ namespace AspNetEdit.Editor
 	{
 		EditorHost host;
 		ServiceContainer services;
-		Frame geckoFrame;
+		Frame webKitFrame;
 		PropertyGrid propertyGrid;
 		
 		public EditorProcess ()
@@ -100,10 +100,10 @@ namespace AspNetEdit.Editor
 			System.Diagnostics.Trace.WriteLine ("Building AspNetEdit GUI");
 			Gtk.VBox outerBox = new Gtk.VBox ();
 			
-			geckoFrame = new Frame ();
-			geckoFrame.Shadow = ShadowType.In;
-			geckoFrame.Add (host.DesignerView);
-			outerBox.PackEnd (geckoFrame, true, true, 0);
+			webKitFrame = new Frame ();
+			webKitFrame.Shadow = ShadowType.In;
+			webKitFrame.Add (host.DesignerView);
+			outerBox.PackEnd (webKitFrame, true, true, 0);
 			
 			Toolbar tb = BuildToolbar ();
 			outerBox.PackStart (tb, false, false, 0);

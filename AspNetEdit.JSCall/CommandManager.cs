@@ -30,13 +30,14 @@
 
 using System;
 using System.Collections;
-using Gecko;
+//using Gecko;
 using System.Text;
 
 namespace AspNetEdit.JSCall
 {
 	public class CommandManager
 	{
+		/* TODO: Implement a new Glue layer
 		private const char delimiter = (char)234;
 		
 		private Hashtable functions = new Hashtable ();
@@ -157,6 +158,7 @@ namespace AspNetEdit.JSCall
 				throw new IndexOutOfRangeException ("A function with this name has not been registered.");
 			}
 		}
+		*/
 	}
 
 	public delegate string ClrCall (string[] args);

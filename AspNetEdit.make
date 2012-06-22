@@ -61,8 +61,8 @@ FILES =  \
 	AspNetEdit.Integration/AspNetEditDisplayBinding.cs \
 	AspNetEdit.Integration/AspNetEditViewContent.cs \
 	AspNetEdit.Integration/EditorProcess.cs \
-	AspNetEdit.Integration/GeckoWebBrowser.cs \
 	AspNetEdit.Integration/MonoDevelopProxy.cs \
+	AspNetEdit.Integration/WebKitWebBrowser.cs \
 	AspNetEdit.JSCall/CommandManager.cs \
 	AspNetEdit.JSCall/InvalidJSArgumentException.cs \
 	AssemblyInfo.cs
@@ -86,7 +86,6 @@ EXTRAS = \
 	ChangeLog
 
 REFERENCES =  \
-	-pkg:gecko-sharp-2.0 \
 	-pkg:gtk-sharp-2.0 \
 	-pkg:mono-addins \
 	-pkg:monodevelop \

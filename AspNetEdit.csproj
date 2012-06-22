@@ -23,6 +23,11 @@
       <Execution clr-version="Net_2_0" />
     </Execution>
     <AssemblyOriginatorKeyFile>.</AssemblyOriginatorKeyFile>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="Execute" command="../../main/build/bin/MonoDevelop.exe" workingdir="../../main/build/bin/" />
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>none</DebugType>
@@ -42,12 +47,8 @@
     <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Drawing" />
-    <Reference Include="gecko-sharp, Version=2.0.0.0, Culture=neutral, PublicKeyToken=ccf7d78a55e9f021" />
     <Reference Include="Mono.Addins, Version=0.4.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
       <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="NRefactory, Version=0.0.0.0, Culture=neutral">
-      <Package>monodevelop</Package>
     </Reference>
     <Reference Include="Mono.TextEditor, Version=1.0.0.0, Culture=neutral">
       <Package>monodevelop</Package>
@@ -194,7 +195,7 @@
     <Compile Include="AspNetEdit.Editor.ComponentModel\EventBindingService.cs" />
     <Compile Include="AspNetEdit.JSCall\CommandManager.cs" />
     <Compile Include="AspNetEdit.JSCall\InvalidJSArgumentException.cs" />
-    <Compile Include="AspNetEdit.Integration\GeckoWebBrowser.cs" />
+    <Compile Include="AspNetEdit.Integration\WebKitWebBrowser.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AspNetEdit.addin.xml">

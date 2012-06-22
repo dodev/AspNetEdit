@@ -40,10 +40,13 @@ using Gtk;
 
 namespace AspNetEdit.Editor.UI
 {
-	public class RootDesignerView : AspNetEdit.Integration.GeckoWebBrowser
+	public class RootDesignerView : AspNetEdit.Integration.WebKitWebBrowser
 	{
-		private const string geckoChrome = "chrome://aspdesigner/content/"; 
-		private CommandManager comm;
+		// TODO: implement WebKit.WebView/C#  communication
+		
+		// isolated the AspNetEdit.JSCall.CommandManager
+		//private const string geckoChrome = "chrome://aspdesigner/content/"; 
+		//private CommandManager comm;
 		private DesignerHost host;
 		private IComponentChangeService changeService;
 		private ISelectionService selectionService;
@@ -69,7 +72,7 @@ namespace AspNetEdit.Editor.UI
 			: base()
 		{
 			//it's through this that we communicate with JavaScript
-			comm = new CommandManager (this);
+			//comm = new CommandManager (this);
 
 			//we use the host to get services and designers
 			this.host =  host as DesignerHost;
@@ -97,7 +100,7 @@ namespace AspNetEdit.Editor.UI
 			selectionService.SelectionChanged += new EventHandler (selectionService_SelectionChanged);
 	
 			//Register incoming calls from JavaScript
-			comm.RegisterJSHandler ("Click", new ClrCall (JSClick));
+			/*comm.RegisterJSHandler ("Click", new ClrCall (JSClick));
 			comm.RegisterJSHandler ("Activate", new ClrCall (JSActivate));
 			comm.RegisterJSHandler ("ThrowException", new ClrCall (JSException));
 			comm.RegisterJSHandler ("DebugStatement", new ClrCall (JSDebugStatement));
@@ -105,14 +108,15 @@ namespace AspNetEdit.Editor.UI
 			comm.RegisterJSHandler ("DocumentReturn", new ClrCall (JSDocumentReturn));
 			comm.RegisterJSHandler ("RemoveControl", new ClrCall (JSRemoveControl));
 			comm.RegisterJSHandler ("DeserializeAndAdd", new ClrCall (JSDeserializeAndAdd));
-			comm.RegisterJSHandler ("Serialize", new ClrCall (JSSerialize));
+			comm.RegisterJSHandler ("Serialize", new ClrCall (JSSerialize));*/
 			System.Diagnostics.Trace.WriteLine ("RootDesignerView created");
 		}
 		
 		internal void BeginLoad ()
 		{
-			System.Diagnostics.Trace.WriteLine ("Loading XUL...");
-			base.LoadUrl (geckoChrome);
+			// TODO: load the document in a WebKit.WebView
+			//System.Diagnostics.Trace.WriteLine ("Loading XUL...");
+			//base.LoadUrl (geckoChrome);
 		}
 		
 		public override void Destroy ()
@@ -129,7 +133,7 @@ namespace AspNetEdit.Editor.UI
 			if (!active) return;
 			
 			//deselect all
-			comm.JSCall (GeckoFunctions.SelectControl, null, string.Empty);
+			//comm.JSCall (GeckoFunctions.SelectControl, null, string.Empty);
 			if (selectionService.SelectionCount == 0) return;
 			
 			ICollection selections = selectionService.GetSelectedComponents ();		
@@ -140,7 +144,7 @@ namespace AspNetEdit.Editor.UI
 				if (control == null)
 					throw new InvalidOperationException ("One of the selected components is not a System.Web.UI.Control.");
 				//select the control
-				comm.JSCall (GeckoFunctions.SelectControl, null, control.UniqueID);
+				//comm.JSCall (GeckoFunctions.SelectControl, null, control.UniqueID);
 			}
 		}
 
@@ -156,7 +160,7 @@ namespace AspNetEdit.Editor.UI
 				throw new InvalidOperationException ("The updated component is not a System.UI.WebControl");
 			
 			string ctext = Document.RenderDesignerControl (control);
-			comm.JSCall (GeckoFunctions.UpdateControl, null, control.UniqueID, ctext);
+			//comm.JSCall (GeckoFunctions.UpdateControl, null, control.UniqueID, ctext);
 		}
 		
 		#endregion
@@ -166,7 +170,7 @@ namespace AspNetEdit.Editor.UI
 		internal void InsertFragment (string fragment)
 		{
 			System.Diagnostics.Trace.WriteLine ("Inserting document fragment: " + fragment);
-			comm.JSCall (GeckoFunctions.InsertFragment, null, host.RootDocument.Serialize (fragment));
+			//comm.JSCall (GeckoFunctions.InsertFragment, null, host.RootDocument.Serialize (fragment));
 		}
 		
 		internal void AddControl (Control control)
@@ -174,14 +178,14 @@ namespace AspNetEdit.Editor.UI
 			if (!active) return;
 			
 			string ctext = Document.RenderDesignerControl (control);
-			comm.JSCall (GeckoFunctions.AddControl, null, control.UniqueID, ctext);
+			//comm.JSCall (GeckoFunctions.AddControl, null, control.UniqueID, ctext);
 		}
 
 		internal void RemoveControl (Control control)
 		{
 			if (!active) return;
 			
-			comm.JSCall (GeckoFunctions.RemoveControl, null, control.UniqueID);
+			//comm.JSCall (GeckoFunctions.RemoveControl, null, control.UniqueID);
 		}
 		
 		internal void RenameControl (string oldName, string newName)
@@ -191,7 +195,7 @@ namespace AspNetEdit.Editor.UI
 		
 		internal new string GetDocument ()
 		{
-			comm.JSCall (GeckoFunctions.GetPage, "DocumentReturn", null);
+			//comm.JSCall (GeckoFunctions.GetPage, "DocumentReturn", null);
 			
 			int counter = 0;
 			do {
@@ -213,7 +217,7 @@ namespace AspNetEdit.Editor.UI
 		internal void DoCommand (string editorCommand)
 		{
 			System.Diagnostics.Trace.WriteLine ( "Executing command \"" + editorCommand +"\"");
-			comm.JSCall (GeckoFunctions.DoCommand, null, editorCommand);
+			//comm.JSCall (GeckoFunctions.DoCommand, null, editorCommand);
 		}
 		
 		#endregion
@@ -253,7 +257,7 @@ namespace AspNetEdit.Editor.UI
 			System.Diagnostics.Trace.WriteLine ("XUL loaded.");
 			//load document with filled-in design-time HTML
 			string doc = host.RootDocument.GetLoadedDocument ();
-			comm.JSCall (GeckoFunctions.LoadPage, null, doc);
+			//comm.JSCall (GeckoFunctions.LoadPage, null, doc);
 			active = true;
 			return string.Empty;
 		}
@@ -426,7 +430,7 @@ namespace AspNetEdit.Editor.UI
 		#endregion
 		
 		#region Outbound Gecko functions
-		
+		/*
 		private class GeckoFunctions
 		{
 			///<summary>
@@ -495,7 +499,7 @@ namespace AspNetEdit.Editor.UI
 			public static readonly string InsertFragment = "JSCall_InsertFragment";
 		}
 		
-		
+		*/
 		
 		#endregion
 	}

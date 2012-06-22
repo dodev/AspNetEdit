@@ -137,6 +137,7 @@ namespace AspNetEdit.Integration
 		
 		public override void Selected ()
 		{
+			/* To be removed: checking for installed extension
 			//check that the Mozilla extension is installed correctly, and if not, display an error
 			if (extensionError != null) {
 				return;
@@ -159,7 +160,7 @@ namespace AspNetEdit.Integration
 			} else {
 				extensionError = null;
 			}
-			
+			*/
 			if (editorProcess != null)
 				throw new Exception ("Editor should be null when document is selected");
 			
@@ -171,6 +172,7 @@ namespace AspNetEdit.Integration
 			propGridSocket.Show ();
 			propertyFrame.Add (propGridSocket);
 			
+			// FIXME: Runtime.ProcessService cannot load EditorProcess from AspNetEdit assembly
 			editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
 			
 			if (designerSocket.IsRealized)
@@ -193,8 +195,6 @@ namespace AspNetEdit.Integration
 			//hook up proxy for event binding
 			string codeBehind = null;
 			if (viewContent.Project != null) {
-				string mimeType = DesktopService.GetMimeTypeForUri (viewContent.ContentName);
-				
 				using (StringReader reader = new StringReader (textBuf.Text)) {
 					AspNetParser parser = new AspNetParser ();
 					AspNetParsedDocument cu = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project) 
@@ -330,7 +330,7 @@ namespace AspNetEdit.Integration
 			{
 			}
 		}
-		
+		/* Mozilla XUL runner stuff, to be removed
 		bool MozillaInstalled (ref string error)
 		{
 			string mozPath = System.Environment.GetEnvironmentVariable ("MOZILLA_FIVE_HOME");
@@ -433,5 +433,6 @@ namespace AspNetEdit.Integration
 			}
 			return false;
 		}
+		*/
 	}
 }
