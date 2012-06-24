@@ -35,11 +35,11 @@ using System.IO;
 using System.ComponentModel;
 using Gtk;
 
+// using ICSharpCode.NRefactory.CSharp; //FIXME: ICSharpCode.NRefactory.CSharp available, while editing in monodevlop, can not be found when trying to build the solution
+using ICSharpCode.NRefactory.TypeSystem;
+
 using Mono.Addins;
-using MonoDevelop.AspNet;
 using MonoDevelop.AspNet.Parser;
-using MonoDevelop.AspNet.Parser.Dom;
-using MonoDevelop.AspNet.Parser.Internal;
 using MonoDevelop.Ide.Gui;
 using MonoDevelop.Ide.Gui.Content;
 using MonoDevelop.Core;
@@ -48,6 +48,7 @@ using MonoDevelop.Core.Execution;
 using MonoDevelop.DesignerSupport.Toolbox;
 using MonoDevelop.DesignerSupport;
 using MonoDevelop.Components.PropertyGrid;
+
 using AspNetEdit.Editor;
 
 namespace AspNetEdit.Integration
@@ -190,21 +191,44 @@ namespace AspNetEdit.Integration
 			//designerSocket.FocusOutEvent += delegate {
 			//	MonoDevelop.DesignerSupport.DesignerSupport.Service.PropertyPad.BlankPad (); };
 			
-			ITextBuffer textBuf = (ITextBuffer)viewContent.GetContent<ITextBuffer> ();		
+			ITextBuffer textBuf = (ITextBuffer)viewContent.GetContent<ITextBuffer> ();
 			
 			//hook up proxy for event binding
 			string codeBehind = null;
+			string codeBehindFile = null;
+			IType codeBehindIType = null;
 			if (viewContent.Project != null) {
 				using (StringReader reader = new StringReader (textBuf.Text)) {
 					AspNetParser parser = new AspNetParser ();
-					AspNetParsedDocument cu = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project) 
+					var cu = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
 						as AspNetParsedDocument;
 
-					if (cu != null && cu.Info != null && !string.IsNullOrEmpty (cu.Info.InheritedClass))
-						codeBehind = cu.Info.InheritedClass;
+					if (cu != null && cu.Info != null) {
+						if (string.IsNullOrEmpty (cu.Info.InheritedClass))
+							codeBehind = cu.Info.InheritedClass;
+						if (string.IsNullOrEmpty (cu.Info.InheritedClass))
+							codeBehind = cu.Info.CodeBehindFile;
+					}
 				}
+				
+				// TODO: Test it out
+				// TODO: handle VB.NET in codeFile
+//				if (!string.IsNullOrEmpty (codeBehind) && !string.IsNullOrEmpty (codeBehindFile)) {
+//					using (StreamReader strReader = new StreamReader (codeBehindFile)) {
+//						CSharpParser csParser = new CSharpParser ();
+//						CompilationUnit compilationUnit = csParser.Parse (strReader, codeBehindFile);
+//						
+//						IProjectContent project = new CSharpProjectContent ();
+//						project = project.UpdateProjectContent (null, compilationUnit.ToTypeSystem ());
+//						
+//						ICompilation compilation = project.CreateCompilation ();
+//						
+//						codeBehindIType = System.Type.GetType (codeBehind).ToTypeReference ().Resolve (compilation);
+//					}
+//				}
 			}
-			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
+			
+			proxy = new MonoDevelopProxy (viewContent.Project, codeBehindIType);
 			
 			editorProcess.Initialise (proxy, textBuf.Text, viewContent.ContentName);
 			
