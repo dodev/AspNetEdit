@@ -38,7 +38,7 @@ using System.ComponentModel.Design.Serialization;
 using MonoDevelop.Ide;
 using MonoDevelop.Ide.Gui;
 using MonoDevelop.DesignerSupport.Toolbox;
-using MonoDevelop.AspNet.Parser;
+//using MonoDevelop.AspNet.Parser;
 
 using AspNetEdit.Editor.ComponentModel;
 using AspNetEdit.Editor.UI;

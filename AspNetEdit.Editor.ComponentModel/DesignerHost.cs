@@ -40,7 +40,7 @@ using System.Web.UI;
 using System.Web.UI.Design;
 
 using MonoDevelop.AspNet;
-using MonoDevelop.AspNet.Parser;
+//using MonoDevelop.AspNet.Parser;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -54,12 +54,13 @@ namespace AspNetEdit.Editor.ComponentModel
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
 			// FIXME: use AspNetAppProject for the current project
-			referenceManager = new WebFormReferenceManager (new AspNetAppProject());
+			//referenceManager = new WebFormReferenceManager (new AspNetAppProject());
+			referenceManager = new WebFormReferenceManager (this);
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
 			parentServices.AddService (typeof (IComponentChangeService), container);
-			parentServices.AddService (typeof (WebFormReferenceManager), referenceManager);		
+			parentServices.AddService (typeof (IWebFormReferenceManager), referenceManager);		
 		}
 
 		public WebFormReferenceManager WebFormReferenceManager

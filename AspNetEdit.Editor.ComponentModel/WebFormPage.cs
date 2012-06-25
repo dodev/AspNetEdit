@@ -38,7 +38,7 @@ using System.Web.Compilation;
 using System.Collections;
 using System.Web.UI;
 using System.ComponentModel.Design;
-using AspNetEdit.Editor.Persistence;
+//using AspNetEdit.Editor.Persistence;
 
 namespace AspNetEdit.Editor.ComponentModel
 {

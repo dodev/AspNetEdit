@@ -175,6 +175,7 @@ namespace AspNetEdit.Integration
 			
 			// FIXME: Runtime.ProcessService cannot load EditorProcess from AspNetEdit assembly
 			editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
+			//editorProcess = new EditorProcess ();
 			
 			if (designerSocket.IsRealized)
 				editorProcess.AttachDesigner (designerSocket.Id);
@@ -252,6 +253,7 @@ namespace AspNetEdit.Integration
 		void saveDocumentToTextView ()
 		{
 			if (editorProcess != null && !editorProcess.ExceptionOccurred) {
+				/* TODO: Reimplement the Editor.GetDocument method
 				IEditableTextBuffer textBuf = (IEditableTextBuffer) viewContent.GetContent<IEditableTextBuffer> ();
 				
 				string doc = null;
@@ -265,6 +267,8 @@ namespace AspNetEdit.Integration
 			
 				if (doc != null)
 					textBuf.Text = doc;
+					
+				*/
 			}
 		}
 		

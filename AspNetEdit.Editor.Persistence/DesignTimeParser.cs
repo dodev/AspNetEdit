@@ -40,14 +40,14 @@ using AspNetEdit.Editor.ComponentModel;
 
 using MonoDevelop.AspNet.Parser.Internal;
 using MonoDevelop.AspNet.Parser.Dom;
-using MonoDevelop.AspNet.Parser;
+//using MonoDevelop.AspNet.Parser;
 
 namespace AspNetEdit.Editor.Persistence
 {
 	public class DesignTimeParser
 	{
 		DesignerHost host;
-		WebFormReferenceManager refMan;
+		IWebFormReferenceManager refMan;
 
 		RootParsingObject rootParsingObject = null;
 		ParsingObject openObject = null;
@@ -57,7 +57,7 @@ namespace AspNetEdit.Editor.Persistence
 		{
 			this.host = host;
 			this.document = document;
-			refMan = host.GetService(typeof(WebFormReferenceManager)) as WebFormReferenceManager;
+			refMan = host.GetService(typeof(IWebFormReferenceManager)) as IWebFormReferenceManager;
 			if (refMan == null)
 				throw new Exception ("Could not get IWebFormReferenceManager from host");
 		}

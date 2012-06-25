@@ -121,7 +121,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		///<summary>Serialises the entire document to ASP.NET code</summary>
 		public string PersistDocument ()
 		{
-			StringBuilder builder = new StringBuilder(this.Serialize (view.GetDocument ()));
+			StringBuilder builder = new StringBuilder(this.Serialize (view.GetDocument ()));			
 			
 			//insert all remaining directives
 			for (int i = 0; i <= directivePlaceholderKey; i++)

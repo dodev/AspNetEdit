@@ -55,7 +55,7 @@ namespace AspNetEdit.Editor.Persistence
 			
 		}
 
-		protected virtual WebFormReferenceManager WebFormReferenceManager
+		protected virtual IWebFormReferenceManager WebFormReferenceManager
 		{
 			get { return parent.WebFormReferenceManager; }
 		}

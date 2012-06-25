@@ -47,7 +47,7 @@ using AspNetEdit.Integration;
 
 namespace AspNetEdit.Editor
 {
-	[AddinDependency ("MonoDevelop.AspNet")]
+	[AddinDependency ("MonoDevelop.DesignerSupport")]
 	public class EditorProcess : MonoDevelop.DesignerSupport.RemoteDesignerProcess
 	{
 		EditorHost host;

@@ -47,9 +47,6 @@
     <Reference Include="System" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Drawing" />
-    <Reference Include="Mono.Addins, Version=0.4.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
     <Reference Include="Mono.TextEditor, Version=1.0.0.0, Culture=neutral">
       <Package>monodevelop</Package>
     </Reference>
@@ -70,20 +67,10 @@
       <Private>False</Private>
       <Package>monodevelop</Package>
     </Reference>
-    <Reference Include="atk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="gdk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <Private>False</Private>
-    </Reference>
     <Reference Include="gtk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
       <Private>False</Private>
     </Reference>
     <Reference Include="pango-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
-    <Reference Include="Mono.Cecil, Version=0.9.5.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
-      <Private>False</Private>
-      <Package>monodevelop</Package>
-    </Reference>
     <Reference Include="MonoDevelop.AspNet, Version=2.6.0.0, Culture=neutral">
       <Private>False</Private>
       <Package>monodevelop-core-addins</Package>
@@ -164,6 +151,9 @@
       <Private>False</Private>
       <Package>monodevelop</Package>
     </Reference>
+    <Reference Include="Mono.Addins, Version=0.6.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
@@ -207,17 +197,6 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="chrome\install.rdf" />
-    <None Include="chrome\README" />
-    <None Include="chrome\content\aspdesigner\aspdesigner.xul" />
-    <None Include="chrome\content\aspdesigner\clipboard.js" />
-    <None Include="chrome\content\aspdesigner\constants.js" />
-    <None Include="chrome\content\aspdesigner\contents.rdf" />
-    <None Include="chrome\content\aspdesigner\editor.js" />
-    <None Include="chrome\content\aspdesigner\editorContent.css" />
-    <None Include="chrome\content\aspdesigner\JSCall.js" />
-    <None Include="chrome\content\aspdesigner\xpcom.js" />
-    <None Include="chrome\locale\en-US\aspdesigner\contents.rdf" />
     <None Include="ChangeLog" />
     <None Include="AspNetEdit.make" />
     <None Include="configure" />
@@ -226,7 +205,7 @@
   <ProjectExtensions>
     <MonoDevelop>
       <Properties>
-        <Deployment.LinuxDeployData generatePcFile="false" />
+        <Deployment.LinuxDeployData />
         <MonoDevelop.Autotools.MakefileInfo IntegrationEnabled="true" RelativeMakefileName="AspNetEdit.make" SyncReferences="true" RelativeConfigureInPath="../../">
           <BuildFilesVar Sync="true" Name="FILES" />
           <DeployFilesVar />
