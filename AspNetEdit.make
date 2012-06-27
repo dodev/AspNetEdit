@@ -58,9 +58,9 @@ FILES =  \
 	AspNetEdit.Editor.UI/PropertyGrid.cs \
 	AspNetEdit.Editor.UI/RootDesignerView.cs \
 	AspNetEdit.Editor/EditorHost.cs \
+	AspNetEdit.Editor/EditorProcess.cs \
 	AspNetEdit.Integration/AspNetEditDisplayBinding.cs \
 	AspNetEdit.Integration/AspNetEditViewContent.cs \
-	AspNetEdit.Integration/EditorProcess.cs \
 	AspNetEdit.Integration/MonoDevelopProxy.cs \
 	AspNetEdit.Integration/WebKitWebBrowser.cs \
 	AspNetEdit.JSCall/CommandManager.cs \
@@ -90,6 +90,7 @@ REFERENCES =  \
 	-pkg:mono-addins \
 	-pkg:monodevelop \
 	-pkg:monodevelop-core-addins \
+	-pkg:webkit-sharp-1.0 \
 	System \
 	System.Design \
 	System.Drawing \

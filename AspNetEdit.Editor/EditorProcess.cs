@@ -47,7 +47,7 @@ using AspNetEdit.Editor.ComponentModel;
 using AspNetEdit.Integration;
 using AspNetEdit.Editor;
 
-namespace AspNetEdit
+namespace AspNetEdit.Editor
 {
 	[AddinDependency ("MonoDevelop.AspNetEdit")]
 	public class EditorProcess : RemoteDesignerProcess

@@ -147,8 +147,8 @@ namespace AspNetEdit.Integration
 			propertyFrame.Add (propGridSocket);
 			
 			// FIXME: Runtime.ProcessService cannot load EditorProcess from AspNetEdit assembly
-			editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
-			//editorProcess = new EditorProcess ();
+			//editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
+			editorProcess = new EditorProcess ();
 			
 			if (designerSocket.IsRealized)
 				editorProcess.AttachDesigner (designerSocket.Id);

@@ -104,7 +104,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			System.Diagnostics.Trace.WriteLine ("Document created.");
 		}
 
-		#region Some Gecko communication stuff
+		#region Designer communication
 		
 		//we don't want to have the document lying around forever, but we
 		//want the RootDesignerview to be able to get it when Gecko XUL loads
@@ -116,6 +116,16 @@ namespace AspNetEdit.Editor.ComponentModel
 			string doc = document;
 			document = null;
 			return doc;
+		}
+		
+		public void ShowDesignerSurface ()
+		{
+			if (document == null)
+				throw new Exception ("The document has already been retrieved");
+			
+			view.LoadDocumentInDesigner (document);
+			
+			document = null;
 		}
 		
 		///<summary>Serialises the entire document to ASP.NET code</summary>

@@ -411,6 +411,12 @@ namespace AspNetEdit.Editor.ComponentModel
 			loading = false;
 			OnLoadComplete ();
 		}
+		
+		public void DisplayDesignerSurface ()
+		{
+			// TODO: check for activated, loaded document etc.
+			rootDocument.ShowDesignerSurface ();
+		}
 
 		public void Reset ()
 		{

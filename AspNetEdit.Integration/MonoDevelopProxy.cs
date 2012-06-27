@@ -54,9 +54,12 @@ namespace AspNetEdit.Integration
 		{
 			this.project = project;
 			
-			fullClass = System.Type.GetType (className).ToTypeReference ().Resolve (TypeSystemService.GetProjectContext (project)
-				.CreateCompilation ()
-			);
+			if (className != null)
+				fullClass = System.Type.GetType (className).ToTypeReference ().Resolve (
+					TypeSystemService.GetProjectContext (project).CreateCompilation ()
+				);
+			else
+				fullClass = null;
 			
 			if (fullClass != null)
 				nonDesignerClass = MonoDevelop.DesignerSupport.CodeBehind.GetNonDesignerClass (fullClass);

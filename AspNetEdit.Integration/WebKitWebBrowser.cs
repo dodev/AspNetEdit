@@ -28,14 +28,15 @@
 
 using System;
 using System.IO;
-//using Gecko; TODO: re-implement the wrapper for WebKit
+
+using WebKit;
 
 using MonoDevelop.Ide.WebBrowser;
 
 namespace AspNetEdit.Integration
 {
 	
-	public class WebKitWebBrowser : /*WebControl,*/Gtk.Frame, IWebBrowser // Showing a blank frame for now TODO: implement the WebView Widget
+	public class WebKitWebBrowser : WebView
 	{
 		string delayedUrl;
 		string oldTempFile;
@@ -45,7 +46,8 @@ namespace AspNetEdit.Integration
 		
 		public WebKitWebBrowser ()
 		{
-			/* TODO: Reimplement the interface
+			/* TODO: Reimplement the interface and fire evenets properly
+			 * 
 			WebControl.SetProfilePath ("/tmp", "MonoDevelop");
 			
 			//FIXME: On{Event} doesn't fire
@@ -69,6 +71,7 @@ namespace AspNetEdit.Integration
 				OnTitleChanged ();
 			};
 			*/
+			
 		}
 		
 		//FIXME: OnExposeEvent doesn't fire, but ExposeEvent does
@@ -96,6 +99,7 @@ namespace AspNetEdit.Integration
 		{
 			if (url == null)
 				throw new ArgumentNullException ("url");
+			
 			/*
 			if (!this.IsRealized) {
 				delayedUrl = url;
@@ -198,83 +202,83 @@ namespace AspNetEdit.Integration
 		
 		
 		// TODO: IMplement the IWebBrowserInterface
-		#region IWebBrowser implementation
-		public event EventHandler NetStart;
-
-		public event EventHandler NetStop;
-
-		public void GoForward ()
-		{
-			throw new System.NotImplementedException ();
-		}
-
-		public void GoBack ()
-		{
-			throw new System.NotImplementedException ();
-		}
-
-		public void LoadUrl (string url)
-		{
-			throw new System.NotImplementedException ();
-		}
-
-		public void LoadHtml (string html)
-		{
-			throw new System.NotImplementedException ();
-		}
-
-		public void Reload ()
-		{
-			throw new System.NotImplementedException ();
-		}
-
-		public void StopLoad ()
-		{
-			throw new System.NotImplementedException ();
-		}
-
-		public string Title {
-			get {
-				throw new System.NotImplementedException ();
-			}
-		}
-
-		public string JSStatus {
-			get {
-				throw new System.NotImplementedException ();
-			}
-		}
-
-		public string Location {
-			get {
-				throw new System.NotImplementedException ();
-			}
-		}
-
-		public string LinkStatus {
-			get {
-				throw new System.NotImplementedException ();
-			}
-		}
-
-		public bool CanGoBack {
-			get {
-				throw new System.NotImplementedException ();
-			}
-		}
-
-		public bool CanGoForward {
-			get {
-				throw new System.NotImplementedException ();
-			}
-		}
-		#endregion
+//		#region IWebBrowser implementation
+//		public event EventHandler NetStart;
+//
+//		public event EventHandler NetStop;
+//
+//		public void GoForward ()
+//		{
+//			throw new System.NotImplementedException ();
+//		}
+//
+//		public void GoBack ()
+//		{
+//			throw new System.NotImplementedException ();
+//		}
+//
+//		public void LoadUrl (string url)
+//		{
+//			throw new System.NotImplementedException ();
+//		}
+//
+//		public void LoadHtml (string html)
+//		{
+//			throw new System.NotImplementedException ();
+//		}
+//
+//		public void Reload ()
+//		{
+//			throw new System.NotImplementedException ();
+//		}
+//
+//		public void StopLoad ()
+//		{
+//			throw new System.NotImplementedException ();
+//		}
+//
+//		public string Title {
+//			get {
+//				throw new System.NotImplementedException ();
+//			}
+//		}
+//
+//		public string JSStatus {
+//			get {
+//				throw new System.NotImplementedException ();
+//			}
+//		}
+//
+//		public string Location {
+//			get {
+//				throw new System.NotImplementedException ();
+//			}
+//		}
+//
+//		public string LinkStatus {
+//			get {
+//				throw new System.NotImplementedException ();
+//			}
+//		}
+//
+//		public bool CanGoBack {
+//			get {
+//				throw new System.NotImplementedException ();
+//			}
+//		}
+//
+//		public bool CanGoForward {
+//			get {
+//				throw new System.NotImplementedException ();
+//			}
+//		}
+//		#endregion
 		
 		public event PageLoadedHandler PageLoaded;
 		public event LocationChangingHandler LocationChanging;
 		public event LocationChangingHandler LinkClicked;
 		public event LocationChangedHandler LocationChanged;
-		public event TitleChangedHandler TitleChanged;
+		public event WebKit.TitleChangedHandler TitleChanged;
 		public event StatusMessageChangedHandler JSStatusChanged;
 		public event StatusMessageChangedHandler LinkStatusChanged;
 		public event LoadingProgressChangedHandler LoadingProgressChanged;
@@ -327,7 +331,7 @@ namespace AspNetEdit.Integration
 		protected virtual void OnTitleChanged ()
 		{
 			if (TitleChanged != null)
-				TitleChanged (this, new TitleChangedEventArgs (null /*base.Title*/));
+				TitleChanged (this, new WebKit.TitleChangedArgs ());
 		}
 		
 		public virtual void Destroy ()

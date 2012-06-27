@@ -29,13 +29,15 @@
  */
 
 using System;
-using AspNetEdit.JSCall;
 using System.ComponentModel.Design;
 using System.ComponentModel;
 using System.Text;
-using AspNetEdit.Editor.ComponentModel;
 using System.Web.UI;
 using System.Collections;
+
+using AspNetEdit.Editor.ComponentModel;
+using AspNetEdit.JSCall;
+
 using Gtk;
 
 namespace AspNetEdit.Editor.UI
@@ -54,7 +56,7 @@ namespace AspNetEdit.Editor.UI
 		protected bool active = false;
 		private string outDocument = null;
 		
-		
+		// dodev: To be tested with WebKit
 		//there's weird bug where a second Gecko instance *can't* be created
 		//so until it's fixed we reuse share one instance
 		//TODO: make it so we can have more than one shown at the same time
@@ -502,9 +504,24 @@ namespace AspNetEdit.Editor.UI
 		*/
 		
 		#endregion
+		
+		#region WebView Communication
+	
+		public void LoadDocumentInDesigner (string htmlDocument)
+		{
+			// TODO: strip user JS, add Designer's JS, ot do that in Document
+			this.LoadHtmlString (htmlDocument, "/");			
+		}
+		
+		
+		#endregion
+		
 	}
 	
 	//TODO: GetCommandState to check whether we can perform these commands
+	
+	
+	
 	
 	//commands for DoCommand
 	//simply triggers functionality in Mozilla editor

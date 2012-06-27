@@ -94,9 +94,13 @@ namespace AspNetEdit.Editor
 			host.Activate ();
 			System.Diagnostics.Trace.WriteLine ("DesignerHost activated; getting designer view");
 			
-			IRootDesigner rootDesigner = (IRootDesigner) host.GetDesigner (host.RootComponent);
-			designerView = (RootDesignerView) rootDesigner.GetView (ViewTechnology.Passthrough);
-			designerView.Realized += delegate { System.Diagnostics.Trace.WriteLine ("Designer view realized"); };
+			IRootDesigner rootDesigner = (IRootDesigner)host.GetDesigner (host.RootComponent);
+			designerView = (RootDesignerView)rootDesigner.GetView (ViewTechnology.Passthrough);
+			designerView.Realized += delegate {
+				System.Diagnostics.Trace.WriteLine ("Designer view realized");
+			};
+			
+			host.DisplayDesignerSurface ();
 		}
 		
 		public Gtk.Widget DesignerView {
