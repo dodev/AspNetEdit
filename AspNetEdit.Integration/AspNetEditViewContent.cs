@@ -35,9 +35,6 @@ using System.IO;
 using System.ComponentModel;
 using Gtk;
 
-// using ICSharpCode.NRefactory.CSharp; //FIXME: ICSharpCode.NRefactory.CSharp available, while editing in monodevlop, can not be found when trying to build the solution
-//using ICSharpCode.NRefactory.TypeSystem;
-
 using Mono.Addins;
 using MonoDevelop.AspNet.Parser;
 using MonoDevelop.Ide.Gui;
@@ -138,30 +135,6 @@ namespace AspNetEdit.Integration
 		
 		public override void Selected ()
 		{
-			/* To be removed: checking for installed extension
-			//check that the Mozilla extension is installed correctly, and if not, display an error
-			if (extensionError != null) {
-				return;
-			} else if (!CheckExtension (ref extensionError)) {
-				LoggingService.LogError (extensionError);
-				Label errorlabel = new Label (extensionError);
-				errorlabel.Wrap = true;
-				
-				HBox box = new HBox (false, 10);
-				Image errorImage = new Image (Gtk.Stock.DialogError, Gtk.IconSize.Dialog);
-				
-				box.PackStart (new Label (), true, true, 0);
-				box.PackStart (errorImage, false, false, 10);
-				box.PackStart (errorlabel, true, false, 10);
-				box.PackStart (new Label (), true, true, 0);
-				
-				designerFrame.Add (box);
-				designerFrame.ShowAll ();
-				return;
-			} else {
-				extensionError = null;
-			}
-			*/
 			if (editorProcess != null)
 				throw new Exception ("Editor should be null when document is selected");
 			
@@ -196,8 +169,6 @@ namespace AspNetEdit.Integration
 			
 			//hook up proxy for event binding
 			string codeBehind = null;
-			//string codeBehindFile = null;
-			//IType codeBehindIType = null;
 			if (viewContent.Project != null) {
 				using (StringReader reader = new StringReader (textBuf.Text)) {
 					AspNetParser parser = new AspNetParser ();
@@ -207,28 +178,9 @@ namespace AspNetEdit.Integration
 					if (cu != null && cu.Info != null) {
 						if (string.IsNullOrEmpty (cu.Info.InheritedClass))
 							codeBehind = cu.Info.InheritedClass;
-						//if (string.IsNullOrEmpty (cu.Info.InheritedClass))
-						//	codeBehind = cu.Info.CodeBehindFile;
 					}
 				}
-				
-				// TODO: Test it out
-				// TODO: handle VB.NET in codeFile
-//				if (!string.IsNullOrEmpty (codeBehind) && !string.IsNullOrEmpty (codeBehindFile)) {
-//					using (StreamReader strReader = new StreamReader (codeBehindFile)) {
-//						CSharpParser csParser = new CSharpParser ();
-//						CompilationUnit compilationUnit = csParser.Parse (strReader, codeBehindFile);
-//						
-//						IProjectContent project = new CSharpProjectContent ();
-//						project = project.UpdateProjectContent (null, compilationUnit.ToTypeSystem ());
-//						
-//						ICompilation compilation = project.CreateCompilation ();
-//						
-//						codeBehindIType = System.Type.GetType (codeBehind).ToTypeReference ().Resolve (compilation);
-//					}
-//				}
 			}
-			
 			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
 			
 			editorProcess.Initialise (proxy, textBuf.Text, viewContent.ContentName);
@@ -358,109 +310,5 @@ namespace AspNetEdit.Integration
 			{
 			}
 		}
-		/* Mozilla XUL runner stuff, to be removed
-		bool MozillaInstalled (ref string error)
-		{
-			string mozPath = System.Environment.GetEnvironmentVariable ("MOZILLA_FIVE_HOME");
-			if (mozPath == null) {
-				error = "MOZILLA_FIVE_HOME is not set.";
-				return false;
-			}
-			
-			string ffBrowserManifest = Path.Combine (Path.Combine (mozPath, "chrome"), "toolkit.manifest");
-			if (!File.Exists (ffBrowserManifest)) {
-				error = AddinManager.CurrentLocalizer.GetString (
-				    "MOZILLA_FIVE_HOME does not appear to be pointing to a valid Mozilla runtime: \"{0}\".", mozPath);
-				return false;
-			}
-			return true;
-		}
-		
-		bool ExtensionInstalled (ref string error)
-		{
-			string mozPath = System.Environment.GetEnvironmentVariable ("MOZILLA_FIVE_HOME");
-			string manifestLocation = Path.Combine (Path.Combine (mozPath, "chrome"), "aspdesigner.manifest");
-			if (!System.IO.File.Exists (manifestLocation)) {
-				error = AddinManager.CurrentLocalizer.GetString (
-				    "The ASP.NET designer's Mozilla extension is not installed.");
-				return false;
-			} else {
-				try {
-					using (StreamReader reader = new StreamReader (manifestLocation)) {
-						string line = reader.ReadLine ().Trim ();
-						int startIndex = "content aspdesigner jar:".Length;
-						int length = line.Length - "aspdesigner.jar!/content/aspdesigner/".Length - startIndex;
-						string path = line.Substring (startIndex, length - 1);
-						if (Path.GetFullPath (path) == Path.GetDirectoryName (System.Reflection.Assembly.GetExecutingAssembly ().Location))
-							return true;
-					}
-				} catch (System.UnauthorizedAccessException) {}
-			}
-			
-			error = AddinManager.CurrentLocalizer.GetString (
-			    "A Mozilla extension is installed for the ASP.NET designer, \n" +
-			    "but it is either incorrectly installed or is not the correct version. \n" +
-			    "It is only possible to have one version installed.");
-			return false;
-		}
-		
-		bool InstallExtension (string extensionStatus)
-		{
-			if (!MessageService.Confirm (
-			    AddinManager.CurrentLocalizer.GetString ("Mozilla extension installation"),
-			    extensionStatus + "\n" + AddinManager.CurrentLocalizer.GetString ("Would you like to install it?"),
-			    new AlertButton (AddinManager.CurrentLocalizer.GetString ("Install extension"))))
-				return false;
-			
-			string sourcePath = Path.GetTempFileName ();
-			using (TextWriter writer = new StreamWriter (sourcePath)) {
-				string jarfile = Path.Combine (Path.GetDirectoryName (System.Reflection.Assembly.GetExecutingAssembly ().Location), "aspdesigner.jar");
-				writer.WriteLine ("content aspdesigner jar:{0}!/content/aspdesigner/", jarfile);
-				writer.WriteLine ("locale aspdesigner en-US jar:{0}!/locale/en-US/aspdesigner/", jarfile);
-			}
-			
-			string mozPath = System.Environment.GetEnvironmentVariable ("MOZILLA_FIVE_HOME");
-			string manifestLocation = Path.Combine (Path.Combine (mozPath, "chrome"), "aspdesigner.manifest");
-			
-			//string installCommand = String.Format ("\"sh -c \\\"cp '{0}' '{1}'; chmod a+r '{1}'\\\"\"", sourcePath, manifestLocation);
-			string installCommand = String.Format ("\"install '{0}' '{1}'\"", sourcePath, manifestLocation);
-			LoggingService.LogInfo ("Attempting to run root command: '{0}'", installCommand);
-			ProcessWrapper process = null;
-			try {
-				try {
-					process = Runtime.ProcessService.StartProcess ("xdg-su", "-c " + installCommand, null, null);
-				} catch (System.ComponentModel.Win32Exception) {
-					process = Runtime.ProcessService.StartProcess ("gnomesu", "-c " + installCommand, null, null);
-				}
-				//FIXME: this will hang the GTK thread until we the command completes
-				process.WaitForOutput ();
-				File.Delete (sourcePath);
-				return (process != null && process.ExitCode == 0);
-			} catch (Exception ex) {
-				LoggingService.LogError ("Error installing ASP.NET designer Mozilla extension.", ex);
-			}
-			MessageService.ShowError (
-			    AddinManager.CurrentLocalizer.GetString ("Could not execute command as root. \n"+
-			        "Please manually run the command \n{0}\nbefore continuing.", installCommand));
-			File.Delete (sourcePath);
-			return true;
-		}
-		
-		bool CheckExtension (ref string error)
-		{
-			try {
-				if (!MozillaInstalled (ref error))
-					return false;
-				if (!ExtensionInstalled (ref error))
-					if (!InstallExtension (error))
-						return false;
-				if (ExtensionInstalled (ref error))
-					return true;
-			} catch (Exception ex) {
-				error = AddinManager.CurrentLocalizer.GetString ("Unhandled error:\n{0}", ex.ToString ());
-			}
-			return false;
-		}
-		*/
 	}
 }
