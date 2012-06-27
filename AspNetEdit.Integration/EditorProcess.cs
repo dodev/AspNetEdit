@@ -39,16 +39,18 @@ using System.IO;
 
 using MonoDevelop.Core.Execution;
 using MonoDevelop.Core;
+using MonoDevelop.DesignerSupport;
 using MonoDevelop.DesignerSupport.Toolbox;
 
 using AspNetEdit.Editor.UI;
 using AspNetEdit.Editor.ComponentModel;
 using AspNetEdit.Integration;
+using AspNetEdit.Editor;
 
-namespace AspNetEdit.Editor
+namespace AspNetEdit
 {
-	[AddinDependency ("MonoDevelop.DesignerSupport")]
-	public class EditorProcess : MonoDevelop.DesignerSupport.RemoteDesignerProcess
+	[AddinDependency ("MonoDevelop.AspNetEdit")]
+	public class EditorProcess : RemoteDesignerProcess
 	{
 		EditorHost host;
 		ServiceContainer services;

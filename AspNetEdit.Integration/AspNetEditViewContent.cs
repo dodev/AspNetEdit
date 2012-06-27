@@ -36,7 +36,7 @@ using System.ComponentModel;
 using Gtk;
 
 // using ICSharpCode.NRefactory.CSharp; //FIXME: ICSharpCode.NRefactory.CSharp available, while editing in monodevlop, can not be found when trying to build the solution
-using ICSharpCode.NRefactory.TypeSystem;
+//using ICSharpCode.NRefactory.TypeSystem;
 
 using Mono.Addins;
 using MonoDevelop.AspNet.Parser;
@@ -196,8 +196,8 @@ namespace AspNetEdit.Integration
 			
 			//hook up proxy for event binding
 			string codeBehind = null;
-			string codeBehindFile = null;
-			IType codeBehindIType = null;
+			//string codeBehindFile = null;
+			//IType codeBehindIType = null;
 			if (viewContent.Project != null) {
 				using (StringReader reader = new StringReader (textBuf.Text)) {
 					AspNetParser parser = new AspNetParser ();
@@ -207,8 +207,8 @@ namespace AspNetEdit.Integration
 					if (cu != null && cu.Info != null) {
 						if (string.IsNullOrEmpty (cu.Info.InheritedClass))
 							codeBehind = cu.Info.InheritedClass;
-						if (string.IsNullOrEmpty (cu.Info.InheritedClass))
-							codeBehind = cu.Info.CodeBehindFile;
+						//if (string.IsNullOrEmpty (cu.Info.InheritedClass))
+						//	codeBehind = cu.Info.CodeBehindFile;
 					}
 				}
 				
@@ -229,7 +229,7 @@ namespace AspNetEdit.Integration
 //				}
 			}
 			
-			proxy = new MonoDevelopProxy (viewContent.Project, codeBehindIType);
+			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
 			
 			editorProcess.Initialise (proxy, textBuf.Text, viewContent.ContentName);
 			

@@ -10,12 +10,11 @@
 	
 	<Runtime>
 		<Import assembly = "AspNetEdit.dll"/>
-		<Import file     = "aspdesigner.jar"/>
 	</Runtime>
 
 	<Dependencies>
-		<Addin id="Core" version="3.1.0"/>
-		<Addin id="Ide" version="3.1.0"/>
+		<Addin id="Core" version="3.1.0" />
+		<Addin id="Ide" version="3.1.0" />
 		<Addin id="Deployment" version="3.1.0" />
 		<Addin id="AspNet" version="3.1.0" />
 		<Addin id="DesignerSupport" version="3.1.0" />

@@ -35,9 +35,9 @@ using System.CodeDom;
 using System.Collections.Generic;
 
 using MonoDevelop.Ide;
+using MonoDevelop.Ide.TypeSystem;
+using MonoDevelop.Core;
 using MonoDevelop.Projects;
-//using MonoDevelop.Projects.Dom;
-//using MonoDevelop.Projects.Dom.Parser;
 using MonoDevelop.DesignerSupport;
 using ICSharpCode.NRefactory.TypeSystem;
 
@@ -47,14 +47,22 @@ namespace AspNetEdit.Integration
 	public class MonoDevelopProxy : MarshalByRefObject, IDisposable
 	{
 		Project project;
-		string className;
 		IType fullClass;
+		IUnresolvedTypeDefinition nonDesignerClass;
 		
-		public MonoDevelopProxy (Project project, /*string className*/IType classIType)
-		{			
-			//this.className = string.IsNullOrEmpty (className) ? null : className;
-			this.fullClass = classIType;
+		public MonoDevelopProxy (Project project, string className)
+		{
 			this.project = project;
+			
+			fullClass = System.Type.GetType (className).ToTypeReference ().Resolve (TypeSystemService.GetProjectContext (project)
+				.CreateCompilation ()
+			);
+			
+			if (fullClass != null)
+				nonDesignerClass = MonoDevelop.DesignerSupport.CodeBehind.GetNonDesignerClass (fullClass);
+			else
+				nonDesignerClass = null;
+			
 		}
 		
 		//keep this object available through remoting
@@ -77,29 +85,7 @@ namespace AspNetEdit.Integration
 		
 		//TODO: make this work with inline code
 		#region event binding
-		
-		IUnresolvedTypeDefinition GetNonDesignerClass ()
-		{
-			if (fullClass == null)
-				return null;
-			
-			return MonoDevelop.DesignerSupport.CodeBehind.GetNonDesignerClass (fullClass);
-		}
-		
-//		IType GetFullClass (/*out ProjectDom ctx*/) // Projects.Dom has been dropped
-//		{
-//			if (project == null || className == null) {
-//				//	ctx = null;
-//				return null;
-//			}
-//			//FIXME: using obsolete parser
-//			//ctx = MonoDevelop.Projects.Dom.Parser.ProjectDomService.GetProjectDom (project);
-//			//return ctx.GetType (className, false, false);
-//			// WARNING: TEMP FIX. The method is not useable, yet!!!
-//			
-//			return null;
-//		}
-		
+
 		public bool IdentifierExistsInCodeBehind (string trialIdentifier)
 		{
 			if (fullClass == null)
@@ -122,7 +108,7 @@ namespace AspNetEdit.Integration
 			if (fullClass == null)
 				return new string[0];
 			
-			IMethod MDMeth = (IMethod)BindingService.CodeDomToMDDomMethod (method);
+			IMethod MDMeth = (IMethod)BindingService.CodeDomToMDDomMethod (method); // IUnresolvedMethod to IMethod ??
 			if (MDMeth == null)
 				return null;
 			
@@ -135,16 +121,11 @@ namespace AspNetEdit.Integration
 		
 		public bool ShowMethod (CodeMemberMethod method)
 		{
-			if (fullClass == null)
+			if (nonDesignerClass == null)
 				return false;
 			
-			IUnresolvedTypeDefinition codeBehindClass = GetNonDesignerClass ();
-			
-			if (codeBehindClass == null)
-				return false;
-			
-			Gtk.Application.Invoke ( delegate {
-				//BindingService.CreateAndShowMember (project, fullClass, codeBehindClass, method); //FIXME: new arguments list
+			Gtk.Application.Invoke (delegate {
+				BindingService.CreateAndShowMember (project, fullClass.GetDefinition (), nonDesignerClass, method); 
 			});
 			
 			return true;
@@ -152,12 +133,15 @@ namespace AspNetEdit.Integration
 		
 		public bool ShowLine (int lineNumber)
 		{
-//			IType codeBehindClass = GetNonDesignerClass ();
-//			if (codeBehindClass == null)
-//				return false;
+			if (nonDesignerClass == null)
+				return false;
 			
 			Gtk.Application.Invoke (delegate {
-				//IdeApp.Workbench.OpenDocument (codeBehindClass.CompilationUnit.FileName, lineNumber, 1, true);//FIXME: new arguments list
+				IdeApp.Workbench.OpenDocument (
+					new FilePath (nonDesignerClass.ParsedFile.FileName),
+					lineNumber, 
+					1,
+					MonoDevelop.Ide.Gui.OpenDocumentOptions.Default);
 			});
 			
 			return true;
@@ -165,5 +149,4 @@ namespace AspNetEdit.Integration
 		
 		#endregion event binding
 	}
-	
 }
