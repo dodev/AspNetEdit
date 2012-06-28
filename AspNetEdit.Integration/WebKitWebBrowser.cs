@@ -336,7 +336,6 @@ namespace AspNetEdit.Integration
 		
 		public virtual void Destroy ()
 		{
-			// TODO: Dispose the WebBrowser Widget instance
 		}
 	}
 }

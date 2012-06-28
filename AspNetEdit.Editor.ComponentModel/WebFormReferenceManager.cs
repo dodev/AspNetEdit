@@ -38,7 +38,7 @@ using System.Globalization;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
-	// Obsolete. In the project was used MonoDevelop.AspNet.Parser.WebReferenceManager
+	// Obsolete. In the editor will be used MonoDevelop.AspNet.Parser.WebReferenceManager
 	public class WebFormReferenceManager : IWebFormReferenceManager
 	{
 		private DesignerHost host;

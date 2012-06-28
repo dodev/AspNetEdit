@@ -62,7 +62,6 @@ FILES =  \
 	AspNetEdit.Integration/AspNetEditDisplayBinding.cs \
 	AspNetEdit.Integration/AspNetEditViewContent.cs \
 	AspNetEdit.Integration/MonoDevelopProxy.cs \
-	AspNetEdit.Integration/WebKitWebBrowser.cs \
 	AspNetEdit.JSCall/CommandManager.cs \
 	AspNetEdit.JSCall/InvalidJSArgumentException.cs \
 	AssemblyInfo.cs

@@ -35,12 +35,13 @@ using System.Web.UI.WebControls;
 using System.IO;
 using System.ComponentModel.Design;
 using System.Collections;
-using AspNetEdit.Editor.Persistence;
 using System.ComponentModel;
-using AspNetEdit.Editor.ComponentModel;
 using System.Globalization;
-using AspNetEdit.Editor.UI;
 using System.Reflection;
+
+using AspNetEdit.Editor.Persistence;
+using AspNetEdit.Editor.ComponentModel;
+using AspNetEdit.Editor.UI;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -56,7 +57,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		private Control parent;
 		private DesignerHost host;
-		private RootDesignerView view;
+		//private RootDesignerView view;
 		private DesignTimeParser aspParser;
 		
 		///<summary>Creates a new document</summary>
@@ -64,7 +65,6 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			initDocument (parent, host);
 			this.document = String.Format (newDocument, documentName);
-			GetView ();
 		}
 		
 		///<summary>Creates a document from an existing file</summary>
@@ -74,7 +74,6 @@ namespace AspNetEdit.Editor.ComponentModel
 			
 			Control[] controls;
 			aspParser.ProcessFragment (document, out controls, out this.document);
-			GetView ();
 		}
 		
 		private void initDocument (Control parent, DesignerHost host)
@@ -94,58 +93,53 @@ namespace AspNetEdit.Editor.ComponentModel
 			
 			this.aspParser = new DesignTimeParser (host, this);
 		}
-		
-		private void GetView ()
-		{
-			IRootDesigner rd = (IRootDesigner) host.GetDesigner (host.RootComponent);
-			this.view = (RootDesignerView) rd.GetView (ViewTechnology.Passthrough);
-			
-			view.BeginLoad ();
-			System.Diagnostics.Trace.WriteLine ("Document created.");
-		}
 
 		#region Designer communication
 		
 		//we don't want to have the document lying around forever, but we
 		//want the RootDesignerview to be able to get it when Gecko XUL loads
-		public string GetLoadedDocument ()
+//		public string GetLoadedDocument ()
+//		{
+//			if (document == null)
+//				throw new Exception ("The document has already been retrieved");
+//			//TODO: substitute all components
+//			string doc = document;
+//			document = null;
+//			return doc;
+//		}
+		
+		public string ToDesignableHtml ()
 		{
 			if (document == null)
 				throw new Exception ("The document has already been retrieved");
-			//TODO: substitute all components
+			
+			//view.LoadDocumentInDesigner (document);
 			string doc = document;
 			document = null;
 			return doc;
 		}
 		
-		public void ShowDesignerSurface ()
+		public string ToAspNetCode ()
 		{
-			if (document == null)
-				throw new Exception ("The document has already been retrieved");
+			// TODO: serialize the DOM tree to ASP.NET
 			
-			view.LoadDocumentInDesigner (document);
-			
-			document = null;
+			return string.Empty;
 		}
 		
 		///<summary>Serialises the entire document to ASP.NET code</summary>
-		public string PersistDocument ()
-		{
-			StringBuilder builder = new StringBuilder(this.Serialize (view.GetDocument ()));			
-			
-			//insert all remaining directives
-			for (int i = 0; i <= directivePlaceholderKey; i++)
-			{
-				builder.Insert (0, RemoveDirective(i));
-			}
-			
-			return builder.ToString ();
-		}
+//		public string PersistDocument ()
+//		{
+//			StringBuilder builder = new StringBuilder(this.Serialize (view.GetDocument ()));			
+//			
+//			//insert all remaining directives
+//			for (int i = 0; i <= directivePlaceholderKey; i++)
+//			{
+//				builder.Insert (0, RemoveDirective(i));
+//			}
+//			
+//			return builder.ToString ();
+//		}
 		
-		public void DoCommand (string editorCommand)
-		{
-			view.DoCommand (editorCommand);
-		}
 		
 		#endregion
 		
@@ -340,6 +334,8 @@ namespace AspNetEdit.Editor.ComponentModel
 		
 		#region add/remove/update controls
 		
+		// TODO: reimplement the actions on controls on the DOM tree and the designer container
+		
 		bool suppressAddControl = false;
 		
 		public void AddControl (Control control)
@@ -348,17 +344,17 @@ namespace AspNetEdit.Editor.ComponentModel
 			
 			System.Console.WriteLine("AddControl method called");
 			OnInitMethodInfo.Invoke (control, new object[] {EventArgs.Empty});
-			view.AddControl (control);
+			//view.AddControl (control);
 		}
 
 		public void RemoveControl (Control control)
 		{
-			view.RemoveControl (control);
+			//view.RemoveControl (control);
 		}
 		
 		public void RenameControl (string oldName, string newName)
 		{
-			view.RenameControl (oldName, newName);
+			//view.RenameControl (oldName, newName);
 		}		
 				
 		public void InsertFragment (string fragment)
@@ -366,12 +362,12 @@ namespace AspNetEdit.Editor.ComponentModel
 			Control[] controls;
 			string doc;
 			aspParser.ProcessFragment (fragment, out controls, out doc);
-			view.InsertFragment (doc);
+			//view.InsertFragment (doc);
 			
 			//FIXME: when controls are inserted en masse using InsertFragment, the designer surface
 			//doesn't seem to display then properly till they've been updated
-			foreach (Control c in controls)
-				view.UpdateRender (c);
+//			foreach (Control c in controls)
+//				view.UpdateRender (c);
 		}
 
 		#endregion

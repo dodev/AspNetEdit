@@ -49,7 +49,7 @@ namespace AspNetEdit.Editor
 	
 	public class EditorHost : GuiSyncObject, IDisposable
 	{
-		DesignerHost host;
+		DesignerHost designerHost;
 		ServiceContainer services;
 		RootDesignerView designerView;
 		MonoDevelopProxy proxy;
@@ -71,7 +71,7 @@ namespace AspNetEdit.Editor
 			//services.AddService (typeof (IToolboxService), toolboxService);
 			
 			System.Diagnostics.Trace.WriteLine ("Creating DesignerHost");
-			host = new DesignerHost (services);
+			designerHost = new DesignerHost (services);
 			System.Diagnostics.Trace.WriteLine ("Created DesignerHost");
 		}
 		
@@ -86,21 +86,21 @@ namespace AspNetEdit.Editor
 			
 			System.Diagnostics.Trace.WriteLine ("Loading document into DesignerHost");
 			if (document != null)
-				host.Load (document, fileName);
+				designerHost.Load (document, fileName);
 			else
-				host.NewFile ();
+				designerHost.NewFile ();
 			System.Diagnostics.Trace.WriteLine ("Loaded document into DesignerHost");
 			
-			host.Activate ();
+			designerHost.Activate ();
 			System.Diagnostics.Trace.WriteLine ("DesignerHost activated; getting designer view");
 			
-			IRootDesigner rootDesigner = (IRootDesigner)host.GetDesigner (host.RootComponent);
+			IRootDesigner rootDesigner = (IRootDesigner)designerHost.GetDesigner (designerHost.RootComponent);
 			designerView = (RootDesignerView)rootDesigner.GetView (ViewTechnology.Passthrough);
 			designerView.Realized += delegate {
 				System.Diagnostics.Trace.WriteLine ("Designer view realized");
 			};
 			
-			host.DisplayDesignerSurface ();
+			designerView.LoadDocumentInDesigner (designerHost.GetDesignableHtml ());
 		}
 		
 		public Gtk.Widget DesignerView {
@@ -116,7 +116,7 @@ namespace AspNetEdit.Editor
 		}
 		
 		public DesignerHost DesignerHost {
-			get { return host; }
+			get { return designerHost; }
 		}
 		
 		public void UseToolboxNode (ItemToolboxNode node)
@@ -138,7 +138,7 @@ namespace AspNetEdit.Editor
 				//TODO: Fix WebControlToolboxItem and (mono classlib's use of it) so we don't have to mess around with type lookups and attributes here
 				if (ti.AssemblyName != null && ti.TypeName != null) {
 					//look up and register the type
-					ITypeResolutionService typeRes = (ITypeResolutionService) host.GetService(typeof(ITypeResolutionService));					
+					ITypeResolutionService typeRes = (ITypeResolutionService) designerHost.GetService(typeof(ITypeResolutionService));					
 					typeRes.ReferenceAssembly (ti.AssemblyName);
 					Type controlType = typeRes.GetType (ti.TypeName, true);
 					
@@ -150,20 +150,20 @@ namespace AspNetEdit.Editor
 					//if it's present
 					if (tda != null && tda.Data.Length > 0) {
 						//look up the tag's prefix and insert it into the data						
-						WebFormReferenceManager webRef = host.GetService (typeof (WebFormReferenceManager)) as WebFormReferenceManager;
+						WebFormReferenceManager webRef = designerHost.GetService (typeof (WebFormReferenceManager)) as WebFormReferenceManager;
 						if (webRef == null)
 							throw new Exception("Host does not provide an IWebFormReferenceManager");
 						string aspText = String.Format (tda.Data, webRef.GetTagPrefix (controlType));
 						System.Diagnostics.Trace.WriteLine ("Toolbox processing ASP.NET item data: " + aspText);
 							
 						//and add it to the document
-						host.RootDocument.InsertFragment (aspText);
+						designerHost.RootDocument.InsertFragment (aspText);
 						return;
 					}
 				}
 				
 				//No ToolboxDataAttribute? Get the ToolboxItem to create the components itself
-				ti.CreateComponents (host);
+				ti.CreateComponents (designerHost);
 			}
 		}
 		
@@ -173,9 +173,9 @@ namespace AspNetEdit.Editor
 			
 			//invoke in GUI thread as it catches and displays exceptions nicely
 			Gtk.Application.Invoke ( delegate {
-				host.Reset ();
-				host.Load (document, fileName);
-				host.Activate ();
+				designerHost.Reset ();
+				designerHost.Load (document, fileName);
+				designerHost.Activate ();
 			});
 		}
 		
@@ -185,7 +185,8 @@ namespace AspNetEdit.Editor
 			string doc = "";
 			
 			System.Diagnostics.Trace.WriteLine ("Persisting document.");
-			doc = host.PersistDocument ();
+			//doc = designerHost.PersistDocument ();
+			doc = designerHost.GetEditableAspNetCode ();
 				
 			return doc;
 		}

@@ -311,6 +311,86 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (Deactivated != null)
 				Deactivated (this, EventArgs.Empty);
 		}
+		
+		public void NewFile ()
+		{
+			if (activated || RootComponent != null)
+				throw new InvalidOperationException ("You must reset the host before loading another file.");
+			loading = true;
+
+			this.Container.Add (new WebFormPage ());
+			this.rootDocument = new Document ((Control)rootComponent, this, "New Document");
+
+			loading = false;
+			OnLoadComplete ();
+		}
+
+		public void Load (Stream file, string fileName)
+		{
+			using (TextReader reader = new StreamReader (file))
+			{
+				Load (reader.ReadToEnd (), fileName);
+			}
+		}
+		
+		public void Load (string document, string fileName)
+		{
+			if (activated || RootComponent != null)
+				throw new InvalidOperationException ("You must reset the host before loading another file.");
+			loading = true;
+
+			this.Container.Add (new WebFormPage());
+			this.rootDocument = new Document ((Control)rootComponent, this, document, fileName);
+
+			loading = false;
+			OnLoadComplete ();
+		}
+		
+//		public void DisplayDesignerSurface ()
+//		{
+//			// TODO: check for activated, loaded document etc.
+//			rootDocument.ShowDesignerSurface ();
+//		}
+		
+		public string GetDesignableHtml ()
+		{
+			// TODO: strip user's JS. Add AspNetEdit's JS
+			// TODO: IDesigners for ASP.NET controls components
+			
+			return  rootDocument.ToDesignableHtml ();
+		}
+
+		public string GetEditableAspNetCode ()
+		{
+			
+			return rootDocument.ToAspNetCode ();
+		}
+		
+		
+		public void Reset ()
+		{
+			//container automatically destroys all children when this happens
+			if (rootComponent != null)
+				DestroyComponent (rootComponent);
+
+			if (activated) {
+				OnDeactivated ();
+				this.activated = false;
+			}
+		}
+
+//		public void SaveDocumentToFile (Stream file)
+//		{
+//			StreamWriter writer = new StreamWriter (file);
+//
+//			writer.Write(RootDocument.PersistDocument ());
+//			writer.Flush ();
+//		}
+//		
+//		public string PersistDocument ()
+//		{
+//			return RootDocument.PersistDocument ();
+//		}
 
 		#endregion 
 
@@ -378,70 +458,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		#endregion
 
 
-		public void NewFile ()
-		{
-			if (activated || RootComponent != null)
-				throw new InvalidOperationException ("You must reset the host before loading another file.");
-			loading = true;
-
-			this.Container.Add (new WebFormPage ());
-			this.rootDocument = new Document ((Control)rootComponent, this, "New Document");
-
-			loading = false;
-			OnLoadComplete ();
-		}
-
-		public void Load (Stream file, string fileName)
-		{
-			using (TextReader reader = new StreamReader (file))
-			{
-				Load (reader.ReadToEnd (), fileName);
-			}
-		}
 		
-		public void Load (string document, string fileName)
-		{
-			if (activated || RootComponent != null)
-				throw new InvalidOperationException ("You must reset the host before loading another file.");
-			loading = true;
-
-			this.Container.Add (new WebFormPage());
-			this.rootDocument = new Document ((Control)rootComponent, this, document, fileName);
-
-			loading = false;
-			OnLoadComplete ();
-		}
-		
-		public void DisplayDesignerSurface ()
-		{
-			// TODO: check for activated, loaded document etc.
-			rootDocument.ShowDesignerSurface ();
-		}
-
-		public void Reset ()
-		{
-			//container automatically destroys all children when this happens
-			if (rootComponent != null)
-				DestroyComponent (rootComponent);
-
-			if (activated) {
-				OnDeactivated ();
-				this.activated = false;
-			}
-		}
-
-		public void SaveDocumentToFile (Stream file)
-		{
-			StreamWriter writer = new StreamWriter (file);
-
-			writer.Write(RootDocument.PersistDocument ());
-			writer.Flush ();
-		}
-		
-		public string PersistDocument ()
-		{
-			return RootDocument.PersistDocument ();
-		}
 		
 		/*TODO: Some .NET 2.0 System.Web.UI.Design.WebFormsRootDesigner methods
 		public abstract void RemoveControlFromDocument(Control control);

@@ -67,8 +67,13 @@ namespace AspNetEdit.Editor
 		
 		public void Initialise (MonoDevelopProxy proxy, string document, string fileName)
 		{
+			System.Diagnostics.Trace.WriteLine ("Creating AspNetEdit EditorHost");
+			host = new EditorHost (proxy);
+			host.Initialise (document, fileName);
+			System.Diagnostics.Trace.WriteLine ("Created AspNetEdit EditorHost");
+			
 			StartGuiThread ();
-			Gtk.Application.Invoke ( delegate { LoadGui (proxy, document, fileName); });
+			Gtk.Application.Invoke ( delegate { LoadGui (); });
 		}
 		
 		public EditorHost Editor {
@@ -92,13 +97,8 @@ namespace AspNetEdit.Editor
 			base.HandleError (e);
 		}
 		
-		void LoadGui (MonoDevelopProxy proxy, string document, string fileName)
+		void LoadGui ()
 		{
-			System.Diagnostics.Trace.WriteLine ("Creating AspNetEdit EditorHost");
-			host = new EditorHost (proxy);
-			host.Initialise (document, fileName);
-			System.Diagnostics.Trace.WriteLine ("Created AspNetEdit EditorHost");
-			
 			System.Diagnostics.Trace.WriteLine ("Building AspNetEdit GUI");
 			Gtk.VBox outerBox = new Gtk.VBox ();
 			
@@ -128,23 +128,23 @@ namespace AspNetEdit.Editor
 			
 			ToolButton undoButton = new ToolButton (Stock.Undo);
 			buttons.Add (undoButton);
-			undoButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Undo); };
+			//undoButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Undo); };
 
 			ToolButton redoButton = new ToolButton (Stock.Redo);
 			buttons.Add (redoButton);
-			redoButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Redo); };
+			//redoButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Redo); };
 
 			ToolButton cutButton = new ToolButton (Stock.Cut);
 			buttons.Add (cutButton);
-			cutButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Cut); };
+			//cutButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Cut); };
 
 			ToolButton copyButton = new ToolButton (Stock.Copy);
 			buttons.Add (copyButton);
-			copyButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Copy); };
+			//copyButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Copy); };
 
 			ToolButton pasteButton = new ToolButton (Stock.Paste);
 			buttons.Add (pasteButton);
-			pasteButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Paste); };
+			//pasteButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Paste); };
 			
 			
 			// * Text style
@@ -153,23 +153,23 @@ namespace AspNetEdit.Editor
 			
 			ToolButton boldButton = new ToolButton (Stock.Bold);
 			buttons.Add (boldButton);
-			boldButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Bold); };
+			//boldButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Bold); };
 			
 			ToolButton italicButton = new ToolButton (Stock.Italic);
 			buttons.Add (italicButton);
-			italicButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Italic); };
+			//italicButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Italic); };
 			
 			ToolButton underlineButton = new ToolButton (Stock.Underline);
 			buttons.Add (underlineButton);
-			underlineButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Underline); };
+			//underlineButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Underline); };
 			
 			ToolButton indentButton = new ToolButton (Stock.Indent);
 			buttons.Add (indentButton);
-			indentButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Indent); };
+			//indentButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Indent); };
 			
 			ToolButton unindentButton = new ToolButton (Stock.Unindent);
 			buttons.Add (unindentButton);
-			unindentButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Outdent); };
+			//unindentButton.Clicked += delegate { host.DesignerHost.RootDocument.DoCommand (EditorCommand.Outdent); };
 			
 			return buttons;
 		}
