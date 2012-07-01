@@ -39,8 +39,9 @@ using System.IO;
 using System.Web.UI;
 using System.Web.UI.Design;
 
+using MonoDevelop.SourceEditor;
 using MonoDevelop.AspNet;
-//using MonoDevelop.AspNet.Parser;
+using MonoDevelop.AspNet.Parser;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -55,7 +56,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			container = new DesignContainer (this);
 			// FIXME: use AspNetAppProject for the current project
 			//referenceManager = new WebFormReferenceManager (new AspNetAppProject());
-			referenceManager = new WebFormReferenceManager (this);
+			referenceManager = new AspNetEdit.Editor.ComponentModel.WebFormReferenceManager (this);
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
@@ -325,22 +326,22 @@ namespace AspNetEdit.Editor.ComponentModel
 			OnLoadComplete ();
 		}
 
-		public void Load (Stream file, string fileName)
-		{
-			using (TextReader reader = new StreamReader (file))
-			{
-				Load (reader.ReadToEnd (), fileName);
-			}
-		}
+//		public void Load (Stream file, string fileName)
+//		{
+//			using (TextReader reader = new StreamReader (file))
+//			{
+//				Load (reader.ReadToEnd (), fileName);
+//			}
+//		}
 		
-		public void Load (string document, string fileName)
+		public void Load (SourceEditorView srcEditor, AspNetParsedDocument doc)
 		{
 			if (activated || RootComponent != null)
 				throw new InvalidOperationException ("You must reset the host before loading another file.");
 			loading = true;
 
 			this.Container.Add (new WebFormPage());
-			this.rootDocument = new Document ((Control)rootComponent, this, document, fileName);
+			this.rootDocument = new Document ((Control)rootComponent, this, srcEditor, doc);
 
 			loading = false;
 			OnLoadComplete ();
@@ -457,9 +458,6 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		#endregion
 
-
-		
-		
 		/*TODO: Some .NET 2.0 System.Web.UI.Design.WebFormsRootDesigner methods
 		public abstract void RemoveControlFromDocument(Control control);
 		public virtual void SetControlID(Control control, string id);

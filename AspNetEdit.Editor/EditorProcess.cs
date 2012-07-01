@@ -37,10 +37,12 @@ using System.Drawing.Design;
 using System.ComponentModel.Design.Serialization;
 using System.IO;
 
+using MonoDevelop.AspNet.Parser;
 using MonoDevelop.Core.Execution;
 using MonoDevelop.Core;
 using MonoDevelop.DesignerSupport;
 using MonoDevelop.DesignerSupport.Toolbox;
+using MonoDevelop.SourceEditor;
 
 using AspNetEdit.Editor.UI;
 using AspNetEdit.Editor.ComponentModel;
@@ -65,11 +67,11 @@ namespace AspNetEdit.Editor
 			#endif
 		}
 		
-		public void Initialise (MonoDevelopProxy proxy, string document, string fileName)
+		public void Initialise (MonoDevelopProxy proxy, SourceEditorView srcEditor, AspNetParsedDocument doc)
 		{
 			System.Diagnostics.Trace.WriteLine ("Creating AspNetEdit EditorHost");
 			host = new EditorHost (proxy);
-			host.Initialise (document, fileName);
+			host.Initialise (srcEditor , doc);
 			System.Diagnostics.Trace.WriteLine ("Created AspNetEdit EditorHost");
 			
 			StartGuiThread ();

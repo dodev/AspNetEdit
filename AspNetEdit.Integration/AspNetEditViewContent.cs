@@ -45,6 +45,8 @@ using MonoDevelop.Core.Execution;
 using MonoDevelop.DesignerSupport.Toolbox;
 using MonoDevelop.DesignerSupport;
 using MonoDevelop.Components.PropertyGrid;
+using MonoDevelop.SourceEditor;
+
 
 using AspNetEdit.Editor;
 
@@ -164,26 +166,28 @@ namespace AspNetEdit.Integration
 			
 			//designerSocket.FocusOutEvent += delegate {
 			//	MonoDevelop.DesignerSupport.DesignerSupport.Service.PropertyPad.BlankPad (); };
-			
-			ITextBuffer textBuf = (ITextBuffer)viewContent.GetContent<ITextBuffer> ();
+
+			SourceEditorView srcEditor = viewContent.GetContent<SourceEditorView> () as SourceEditorView;
+			AspNetParsedDocument doc = null;
 			
 			//hook up proxy for event binding
 			string codeBehind = null;
 			if (viewContent.Project != null) {
-				using (StringReader reader = new StringReader (textBuf.Text)) {
+				using (StringReader reader = new StringReader (srcEditor.Text)) {
 					AspNetParser parser = new AspNetParser ();
-					var cu = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
+					doc = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
 						as AspNetParsedDocument;
+					
 
-					if (cu != null && cu.Info != null) {
-						if (string.IsNullOrEmpty (cu.Info.InheritedClass))
-							codeBehind = cu.Info.InheritedClass;
+					if (doc != null && doc.Info != null) {
+						if (string.IsNullOrEmpty (doc.Info.InheritedClass))
+							codeBehind = doc.Info.InheritedClass;
 					}
 				}
 			}
 			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
 			
-			editorProcess.Initialise (proxy, textBuf.Text, viewContent.ContentName);
+			editorProcess.Initialise (proxy, srcEditor, doc);
 			
 			activated = true;
 			

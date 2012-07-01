@@ -38,7 +38,8 @@ using System.ComponentModel.Design.Serialization;
 using MonoDevelop.Ide;
 using MonoDevelop.Ide.Gui;
 using MonoDevelop.DesignerSupport.Toolbox;
-//using MonoDevelop.AspNet.Parser;
+using MonoDevelop.AspNet.Parser;
+using MonoDevelop.SourceEditor;
 
 using AspNetEdit.Editor.ComponentModel;
 using AspNetEdit.Editor.UI;
@@ -80,13 +81,15 @@ namespace AspNetEdit.Editor
 		  		Initialise (null, null);
 		}
 		
-		public void Initialise (string document, string fileName)
+		public void Initialise (SourceEditorView srcEditor, AspNetParsedDocument doc)
 		{
 			DispatchService.AssertGuiThread ();
 			
+			//services.AddService (typeof(WebFormReferenceManager), new WebFormReferenceManager (srcEditor.Project));
+			
 			System.Diagnostics.Trace.WriteLine ("Loading document into DesignerHost");
-			if (document != null)
-				designerHost.Load (document, fileName);
+			if (doc != null)
+				designerHost.Load (srcEditor, doc);
 			else
 				designerHost.NewFile ();
 			System.Diagnostics.Trace.WriteLine ("Loaded document into DesignerHost");
@@ -138,19 +141,19 @@ namespace AspNetEdit.Editor
 				//TODO: Fix WebControlToolboxItem and (mono classlib's use of it) so we don't have to mess around with type lookups and attributes here
 				if (ti.AssemblyName != null && ti.TypeName != null) {
 					//look up and register the type
-					ITypeResolutionService typeRes = (ITypeResolutionService) designerHost.GetService(typeof(ITypeResolutionService));					
+					ITypeResolutionService typeRes = (ITypeResolutionService)designerHost.GetService (typeof(ITypeResolutionService));					
 					typeRes.ReferenceAssembly (ti.AssemblyName);
 					Type controlType = typeRes.GetType (ti.TypeName, true);
 					
 					//read the WebControlToolboxItem data from the attribute
 					AttributeCollection atts = TypeDescriptor.GetAttributes (controlType);
 					
-					System.Web.UI.ToolboxDataAttribute tda = (System.Web.UI.ToolboxDataAttribute) atts[typeof(System.Web.UI.ToolboxDataAttribute)];
+					System.Web.UI.ToolboxDataAttribute tda = (System.Web.UI.ToolboxDataAttribute)atts [typeof(System.Web.UI.ToolboxDataAttribute)];
 						
 					//if it's present
 					if (tda != null && tda.Data.Length > 0) {
 						//look up the tag's prefix and insert it into the data						
-						WebFormReferenceManager webRef = designerHost.GetService (typeof (WebFormReferenceManager)) as WebFormReferenceManager;
+						AspNetEdit.Editor.ComponentModel.WebFormReferenceManager webRef = designerHost.GetService (typeof(AspNetEdit.Editor.ComponentModel.WebFormReferenceManager)) as AspNetEdit.Editor.ComponentModel.WebFormReferenceManager;
 						if (webRef == null)
 							throw new Exception("Host does not provide an IWebFormReferenceManager");
 						string aspText = String.Format (tda.Data, webRef.GetTagPrefix (controlType));
@@ -167,17 +170,17 @@ namespace AspNetEdit.Editor
 			}
 		}
 		
-		public void LoadDocument (string document, string fileName)
-		{
-			System.Diagnostics.Trace.WriteLine ("Copying document to editor.");
-			
-			//invoke in GUI thread as it catches and displays exceptions nicely
-			Gtk.Application.Invoke ( delegate {
-				designerHost.Reset ();
-				designerHost.Load (document, fileName);
-				designerHost.Activate ();
-			});
-		}
+//		public void LoadDocument (string document, string fileName)
+//		{
+//			System.Diagnostics.Trace.WriteLine ("Copying document to editor.");
+//			
+//			//invoke in GUI thread as it catches and displays exceptions nicely
+//			Gtk.Application.Invoke ( delegate {
+//				designerHost.Reset ();
+//				designerHost.Load (document, fileName);
+//				designerHost.Activate ();
+//			});
+//		}
 		
 		public string GetDocument ()
 		{

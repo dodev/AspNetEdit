@@ -39,17 +39,24 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 
-using AspNetEdit.Editor.Persistence;
-using AspNetEdit.Editor.ComponentModel;
-using AspNetEdit.Editor.UI;
+//using AspNetEdit.Editor.Persistence;
+//using AspNetEdit.Editor.ComponentModel;
+//using AspNetEdit.Editor.UI;
+
+using MonoDevelop.Xml;
+using MonoDevelop.AspNet;
+using MonoDevelop.AspNet.Parser;
+using MonoDevelop.AspNet.Parser.Dom;
+using MonoDevelop.AspNet.StateEngine;
+using MonoDevelop.SourceEditor;
+
+using ICSharpCode.NRefactory;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
 	public class Document
 	{
 		public static readonly string newDocument = "<html>\n<head>\n\t<title>{0}</title>\n</head>\n<body>\n<form runat=\"server\">\n\n</form></body>\n</html>";
-		public static readonly string ControlSubstituteStructure = "<aspcontrol id=\"{0}\" width=\"{1}\" height=\"{2}\" -md-can-drop=\"{3}\" -md-can-resize=\"{4}\">{5}</aspcontrol>";
-		public static readonly string DirectivePlaceholderStructure = "<directiveplaceholder id=\"{0}\" />";
 
 		string document;
 		Hashtable directives;
@@ -57,8 +64,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		private Control parent;
 		private DesignerHost host;
-		//private RootDesignerView view;
-		private DesignTimeParser aspParser;
+		
+		AspNetParsedDocument aspDoc;
+		SourceEditorView srcEditor;
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
@@ -68,12 +76,16 @@ namespace AspNetEdit.Editor.ComponentModel
 		}
 		
 		///<summary>Creates a document from an existing file</summary>
-		public Document (Control parent, DesignerHost host, string document, string fileName)
+		public Document (Control parent, DesignerHost host, SourceEditorView srcEditorView, AspNetParsedDocument doc)
 		{
 			initDocument (parent, host);
+			this.srcEditor = srcEditorView;
+			this.aspDoc = doc;
 			
 			Control[] controls;
-			aspParser.ProcessFragment (document, out controls, out this.document);
+			
+			//aspParser.ProcessFragment (document, out controls, out this.document);
+			parse (srcEditor.Text, aspDoc.FileName);
 		}
 		
 		private void initDocument (Control parent, DesignerHost host)
@@ -81,41 +93,50 @@ namespace AspNetEdit.Editor.ComponentModel
 			System.Diagnostics.Trace.WriteLine ("Creating document...");
 			if (!(parent is WebFormPage))
 				throw new NotImplementedException ("Only WebFormsPages can have a document for now");
-			this.parent =  parent;
+			this.parent = parent;
 			this.host = host;
 			
 			if (!host.Loading)
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
-			CaseInsensitiveHashCodeProvider provider = new CaseInsensitiveHashCodeProvider(CultureInfo.InvariantCulture);
-			CaseInsensitiveComparer comparer = new CaseInsensitiveComparer(CultureInfo.InvariantCulture);
+			CaseInsensitiveHashCodeProvider provider = new CaseInsensitiveHashCodeProvider (CultureInfo.InvariantCulture);
+			CaseInsensitiveComparer comparer = new CaseInsensitiveComparer (CultureInfo.InvariantCulture);
 			directives = new Hashtable (provider, comparer);
 			
-			this.aspParser = new DesignTimeParser (host, this);
+			//this.aspParser = new DesignTimeParser (host, this);
+			xDom = null;
 		}
 
+		#region StateEngine parser
+		
+		MonoDevelop.Xml.StateEngine.XDocument xDom;
+		
+		void parse (string doc, string fileName)
+		{
+			MonoDevelop.Xml.StateEngine.Parser parser = new MonoDevelop.Xml.StateEngine.Parser (
+				new MonoDevelop.AspNet.StateEngine.AspNetFreeState (),
+				true
+			);
+
+			using (StringReader strRd = new StringReader (doc)) {
+				parser.Parse (strRd);
+			}
+
+			xDom = parser.Nodes.GetRoot ();
+		}
+		
+		#endregion
+		
 		#region Designer communication
 		
-		//we don't want to have the document lying around forever, but we
-		//want the RootDesignerview to be able to get it when Gecko XUL loads
-//		public string GetLoadedDocument ()
-//		{
-//			if (document == null)
-//				throw new Exception ("The document has already been retrieved");
-//			//TODO: substitute all components
-//			string doc = document;
-//			document = null;
-//			return doc;
-//		}
-		
+
 		public string ToDesignableHtml ()
 		{
-			if (document == null)
-				throw new Exception ("The document has already been retrieved");
-			
-			//view.LoadDocumentInDesigner (document);
-			string doc = document;
-			document = null;
+			string doc = null;
+			if (xDom != null) {
+				doc = serializeNode (xDom.RootElement);
+			}
+
 			return doc;
 		}
 		
@@ -125,21 +146,112 @@ namespace AspNetEdit.Editor.ComponentModel
 			
 			return string.Empty;
 		}
+		#endregion
 		
-		///<summary>Serialises the entire document to ASP.NET code</summary>
-//		public string PersistDocument ()
-//		{
-//			StringBuilder builder = new StringBuilder(this.Serialize (view.GetDocument ()));			
-//			
-//			//insert all remaining directives
-//			for (int i = 0; i <= directivePlaceholderKey; i++)
-//			{
-//				builder.Insert (0, RemoveDirective(i));
-//			}
-//			
-//			return builder.ToString ();
-//		}
+		#region Serialization
 		
+		TextLocation prevTagLocation = new TextLocation (TextLocation.MinLine, TextLocation.MinColumn);
+		
+		string serializeNode (MonoDevelop.Xml.StateEngine.XNode node)
+		{
+			prevTagLocation = node.Region.End;
+			
+			MonoDevelop.Xml.StateEngine.XElement element = node as MonoDevelop.Xml.StateEngine.XElement;
+			if (element == null) {
+//				switch (node.GetType ().ToString ()) {
+//				case typeof (AspNetDirective).ToString ():
+//					break;
+//				case typeof (AspNetHtmlEncodedExpression).ToString ():
+//					break;
+//				case typeof (AspNetRenderBlock).ToString ():
+//					break;
+//				case typeof (AspNetRenderExpression).ToString ():
+//					break;
+//				case typeof (AspNetServerComment).ToString ():
+//					break;
+//				case typeof (AspNetResourceExpression).ToString ():
+//					break;
+//				case typeof (AspNetDataBindingExpression).ToString ():
+//					break;
+//				}
+				return string.Empty; // TODO: serialize AspNetDom nodes with the right end location
+			}
+			
+			// checking for a ASP.NET server control
+			if (element.Name.HasPrefix && (element.Name.Prefix == "asp")) {
+				
+			}
+			
+			// the node is a html element
+			
+			string output = "<" + element.Name.FullName;
+			
+			// print the attributes... TODO: watchout for runat="server"
+			foreach (MonoDevelop.Xml.StateEngine.XAttribute attr in element.Attributes) {
+				output += " " + attr.Name.FullName + "=\"" + attr.Value + "\"";
+			}
+			
+			if (element.IsSelfClosing) {
+				output += " />";
+			} else {
+				output += ">";
+				
+				// serializing the childnodes if any
+				foreach (MonoDevelop.Xml.StateEngine.XNode nd in element.Nodes) {
+					// get the text before the openning tag of the child element
+					output += srcEditor.TextEditor.GetTextBetween (
+							prevTagLocation.Line,
+							prevTagLocation.Column,
+							nd.Region.BeginLine,
+							nd.Region.BeginColumn
+					);
+					// and the element itself
+					output += serializeNode (nd);
+				}
+				
+				// printing the text after the closing tag of the child elements
+				int lastChildEndLine = element.Region.EndLine;
+				int lastChildEndColumn = element.Region.EndColumn;
+				
+				// if the element have 1+ children
+				if (element.LastChild != null) {
+					var lastChild = element.LastChild as MonoDevelop.Xml.StateEngine.XElement;
+					// the last child is an XML tag
+					if (lastChild != null) {
+						// the tag is selfclosing
+						if (lastChild.IsSelfClosing) {
+							lastChildEndLine = lastChild.Region.EndLine;
+							lastChildEndColumn = lastChild.Region.EndColumn;
+						// the tag is not selfclosing and has a closing tag
+						} else if (lastChild.ClosingTag != null) {
+							lastChildEndLine = lastChild.ClosingTag.Region.EndLine;
+							lastChildEndColumn = lastChild.ClosingTag.Region.EndColumn;
+						} else {
+							// TODO: the element is not closed. Warn the user
+						}
+					// the last child is not a XML element. Probably AspNet tag. TODO: find the end location of that tag
+					} else {
+						lastChildEndLine = element.LastChild.Region.EndLine;
+						lastChildEndLine = element.LastChild.Region.EndLine;
+					}
+				}
+				
+				if (element.ClosingTag != null) {
+					output += srcEditor.TextEditor.GetTextBetween (
+						lastChildEndLine,
+						lastChildEndColumn,
+						element.ClosingTag.Region.BeginLine,
+						element.ClosingTag.Region.BeginColumn
+					);
+				} else {
+					// TODO: the element is not closed. Warn the user
+				}
+				
+				output += "</" + element.Name.FullName + ">";
+			}
+			
+			return output;
+		}
 		
 		#endregion
 		
@@ -213,7 +325,7 @@ namespace AspNetEdit.Editor.ComponentModel
 							DesignContainer dc = (DesignContainer) host.Container;
 							Control control = dc.GetComponent (id) as Control;
 							if (control == null) throw new Exception ("Could not retrieve control "+id);
-							ControlPersister.PersistControl (writer, control);
+							//ControlPersister.PersistControl (writer, control);
 							
 							mode = SMode.ControlEnd;
 							pos = idEnd;
@@ -361,7 +473,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			Control[] controls;
 			string doc;
-			aspParser.ProcessFragment (fragment, out controls, out doc);
+			//aspParser.ProcessFragment (fragment, out controls, out doc);
 			//view.InsertFragment (doc);
 			
 			//FIXME: when controls are inserted en masse using InsertFragment, the designer surface
