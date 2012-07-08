@@ -230,27 +230,29 @@ namespace AspNetEdit.Integration
 		
 		void DestroyEditorAndSockets ()
 		{
-			if (proxy != null) {
-				proxy.Dispose ();
-				proxy = null;
-			}
-			
-			if (editorProcess != null) {
-				editorProcess.Dispose ();
-				editorProcess = null;
-			}
-			
-			if (propGridSocket != null) {
-				propertyFrame.Remove (propGridSocket);
-				propGridSocket.Dispose ();
-				propGridSocket = null;
-			}
-			
-			if (designerSocket != null) {
-				designerFrame.Remove (designerSocket);
-				designerSocket.Dispose ();
-				designerSocket = null;
-			}
+			// FIXME: dispose the EditorProcess and the sockets
+			editorProcess = null;
+//			if (proxy != null) {
+//				proxy.Dispose ();
+//				proxy = null;
+//			}
+//			
+//			if (editorProcess != null) {
+//				editorProcess.Dispose ();
+//				editorProcess = null;
+//			}
+//			
+//			if (propGridSocket != null) {
+//				propertyFrame.Remove (propGridSocket);
+//				propGridSocket.Dispose ();
+//				propGridSocket = null;
+//			}
+//			
+//			if (designerSocket != null) {
+//				designerFrame.Remove (designerSocket);
+//				designerSocket.Dispose ();
+//				designerSocket = null;
+//			}
 		}
 		
 		#region IToolboxConsumer
