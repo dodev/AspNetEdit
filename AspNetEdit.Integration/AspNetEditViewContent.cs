@@ -38,7 +38,6 @@ using Gtk;
 using Mono.Addins;
 using MonoDevelop.AspNet.Parser;
 using MonoDevelop.Ide.Gui;
-using MonoDevelop.Ide.Gui.Content;
 using MonoDevelop.Core;
 using MonoDevelop.Ide;
 using MonoDevelop.Core.Execution;
@@ -46,14 +45,14 @@ using MonoDevelop.DesignerSupport.Toolbox;
 using MonoDevelop.DesignerSupport;
 using MonoDevelop.Components.PropertyGrid;
 using MonoDevelop.SourceEditor;
-
+using MonoDevelop.Xml.StateEngine;
 
 using AspNetEdit.Editor;
 
 namespace AspNetEdit.Integration
 {
 	
-	public class AspNetEditViewContent : AbstractAttachableViewContent, IToolboxConsumer //, IEditableTextBuffer
+	public class AspNetEditViewContent : AbstractAttachableViewContent, IToolboxConsumer, IOutlinedDocument //, IEditableTextBuffer
 	{
 		IViewContent viewContent;
 		EditorProcess editorProcess;
@@ -63,6 +62,9 @@ namespace AspNetEdit.Integration
 		
 		Frame propertyFrame;
 		DesignerFrame designerFrame;
+		
+		MonoDevelop.Ide.Gui.Components.PadTreeView outlineView;
+		Gtk.TreeStore outlineStore;
 		
 		MonoDevelopProxy proxy;
 		
@@ -87,6 +89,9 @@ namespace AspNetEdit.Integration
 			viewContent.WorkbenchWindow.Closing += workbenchWindowClosingHandler;
 			viewContent.DirtyChanged += vcDirtyChanged;
 			viewContent.BeforeSave += vcBeforeSave;
+			
+			outlineStore = null;
+			outlineStore = null;
 			
 			designerFrame.Show ();
 		}
@@ -178,7 +183,6 @@ namespace AspNetEdit.Integration
 					doc = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
 						as AspNetParsedDocument;
 					
-
 					if (doc != null && doc.Info != null) {
 						if (string.IsNullOrEmpty (doc.Info.InheritedClass))
 							codeBehind = doc.Info.InheritedClass;
@@ -190,6 +194,8 @@ namespace AspNetEdit.Integration
 			editorProcess.Initialise (proxy, srcEditor, doc);
 			
 			activated = true;
+			
+			BuildTreeStore (doc.XDocument);
 			
 			//FIXME: track 'dirtiness' properly
 			viewContent.IsDirty = true;
@@ -297,6 +303,123 @@ namespace AspNetEdit.Integration
 		}
 
 		#endregion IToolboxConsumer
+		
+		#region DocumentOutline stuff
+		
+		#region IOutlinedDocument implementation
+		
+		Widget IOutlinedDocument.GetOutlineWidget ()
+		{
+			if (outlineView != null)
+				return outlineView;
+				
+			if (outlineStore == null)
+				throw new Exception ("The treestore should be built, before initializing the TreeView of the DocumentOutline");
+			
+			outlineView = new MonoDevelop.Ide.Gui.Components.PadTreeView (outlineStore);
+			System.Reflection.PropertyInfo prop = typeof(Gtk.TreeView).GetProperty ("EnableTreeLines");
+			if (prop != null)
+				prop.SetValue (outlineView, true, null);
+			outlineView.TextRenderer.Xpad = 0;
+			outlineView.TextRenderer.Ypad = 0;
+			outlineView.ExpandAll ();
+			outlineView.AppendColumn ("Node", outlineView.TextRenderer, new Gtk.TreeCellDataFunc (OutlineTreeDataFunc));
+			outlineView.HeadersVisible = false;
+			outlineView.Selection.Changed += delegate {
+				Gtk.TreeIter iter = Gtk.TreeIter.Zero;
+				outlineView.Selection.GetSelected (out iter);
+				DocumentOutlineSelectionChanged (outlineStore.GetValue (iter, 0) as XNode);
+			};
+			
+			var sw = new MonoDevelop.Components.CompactScrolledWindow ();
+			sw.Add (outlineView);
+			sw.ShowAll ();
+				
+			return sw;
+		}
+
+		System.Collections.Generic.IEnumerable<Widget> IOutlinedDocument.GetToolbarWidgets ()
+		{
+			return null;
+		}
+
+		void IOutlinedDocument.ReleaseOutlineWidget ()
+		{
+			if (outlineView != null) {
+				Gtk.ScrolledWindow w = (Gtk.ScrolledWindow)outlineView.Parent;
+				w.Destroy ();
+				outlineView.Destroy ();
+				outlineView = null;
+			}
+			
+			if (outlineStore != null) {
+				outlineStore.Dispose ();
+				outlineStore = null;
+			}
+		}
+		
+		#endregion IOutlinedDocument implementation
+		
+		void BuildTreeStore (XDocument doc)
+		{
+			outlineStore = new TreeStore (typeof (object));
+			BuildTreeChildren (Gtk.TreeIter.Zero, doc);
+		}
+		
+		void BuildTreeChildren (Gtk.TreeIter parent, XContainer p)
+		{
+			foreach (XNode n in p.Nodes) {
+				Gtk.TreeIter childIter;
+				if (!parent.Equals (Gtk.TreeIter.Zero))
+					childIter = outlineStore.AppendValues (parent, n);
+				else
+					childIter = outlineStore.AppendValues (n);
+				
+				XContainer c = n as XContainer;
+				if (c != null && c.FirstChild != null)
+					BuildTreeChildren (childIter, c);
+			}
+		}
+		
+		void OutlineTreeDataFunc (Gtk.TreeViewColumn column, Gtk.CellRenderer cell, Gtk.TreeModel model, Gtk.TreeIter iter)
+		{
+			Gtk.CellRendererText txtRenderer = (Gtk.CellRendererText) cell;
+			XNode n = (XNode) model.GetValue (iter, 0);
+			txtRenderer.Text = n.FriendlyPathRepresentation;
+		}
+		
+		void DocumentOutlineSelectionChanged (MonoDevelop.Xml.StateEngine.XNode selNode)
+		{
+			if (selNode == null)
+				return; // not what we are looking for
+			
+			XElement el = selNode as XElement;
+			
+			if (el == null)
+				return; // not a XML tag node
+			
+			bool isRunAtServer = false;
+			string id = string.Empty;
+			XName runatName = new XName ("runat");
+			XName idName = new XName ("id");
+			
+			foreach (XAttribute attr in el.Attributes) {
+				if (attr.Name.ToLower () == runatName) {
+					if (attr.Value == "server")
+						isRunAtServer = true;
+					else
+						break;
+				} else if (attr.Name.ToLower () == idName) {
+					id = attr.Value;
+				}
+			}
+			
+			if (isRunAtServer && (id != string.Empty)) {
+				// we have a winner! pass it forward on the chain
+			}
+		}
+		
+		#endregion DocumentOutline stuff
 		
 		class DesignerFrame: Frame, ICustomPropertyPadProvider
 		{
