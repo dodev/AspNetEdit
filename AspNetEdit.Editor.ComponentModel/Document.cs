@@ -39,14 +39,9 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 
-//using AspNetEdit.Editor.Persistence;
-//using AspNetEdit.Editor.ComponentModel;
-//using AspNetEdit.Editor.UI;
-
 using MonoDevelop.Xml;
 using MonoDevelop.AspNet;
 using MonoDevelop.AspNet.Parser;
-using MonoDevelop.AspNet.Parser.Dom;
 using MonoDevelop.AspNet.StateEngine;
 using MonoDevelop.SourceEditor;
 
@@ -179,7 +174,29 @@ namespace AspNetEdit.Editor.ComponentModel
 			
 			// checking for a ASP.NET server control
 			if (element.Name.HasPrefix && (element.Name.Prefix == "asp")) {
+				// create and add a Component to the Container
+				var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
+				if (refMan == null) {
+					throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
+				}
+				IComponent comp = null;
+				try {
+					string typeName = refMan.GetTypeName (element.Name.Prefix, element.Name.Name);
+					System.Type controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
+					comp = host.CreateComponent (controlType);
+				} catch (Exception ex) {
+					System.Diagnostics.Trace.WriteLine (ex.ToString ());
+				}
 				
+				// genarete placeholder
+				// FIXME: get IDesigner for the added component
+				if (comp != null)
+					return "<div style=\"width:100px; height:20px; background-color: #e3e3e3; color: #670023;\">" + comp.Site.Name + "</div>";
+				else
+					return string.Empty;
+				// TODO: handle different types of controls differently
+				// TODO: handle nested controls
+				// TODO: parse attributes for some info of the node
 			}
 			
 			// the node is a html element
@@ -222,14 +239,14 @@ namespace AspNetEdit.Editor.ComponentModel
 						if (lastChild.IsSelfClosing) {
 							lastChildEndLine = lastChild.Region.EndLine;
 							lastChildEndColumn = lastChild.Region.EndColumn;
-						// the tag is not selfclosing and has a closing tag
+							// the tag is not selfclosing and has a closing tag
 						} else if (lastChild.ClosingTag != null) {
 							lastChildEndLine = lastChild.ClosingTag.Region.EndLine;
 							lastChildEndColumn = lastChild.ClosingTag.Region.EndColumn;
 						} else {
 							// TODO: the element is not closed. Warn the user
 						}
-					// the last child is not a XML element. Probably AspNet tag. TODO: find the end location of that tag
+						// the last child is not a XML element. Probably AspNet tag. TODO: find the end location of that tag
 					} else {
 						lastChildEndLine = element.LastChild.Region.EndLine;
 						lastChildEndLine = element.LastChild.Region.EndLine;
@@ -243,6 +260,7 @@ namespace AspNetEdit.Editor.ComponentModel
 						element.ClosingTag.Region.BeginLine,
 						element.ClosingTag.Region.BeginColumn
 					);
+					prevTagLocation = element.ClosingTag.Region.End;
 				} else {
 					// TODO: the element is not closed. Warn the user
 				}
