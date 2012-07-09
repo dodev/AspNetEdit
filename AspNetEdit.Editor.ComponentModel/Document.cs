@@ -39,7 +39,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 
-using MonoDevelop.Xml;
+using MonoDevelop.Xml.StateEngine;
 using MonoDevelop.AspNet;
 using MonoDevelop.AspNet.Parser;
 using MonoDevelop.AspNet.StateEngine;
@@ -175,19 +175,36 @@ namespace AspNetEdit.Editor.ComponentModel
 			// checking for a ASP.NET server control
 			if (element.Name.HasPrefix && (element.Name.Prefix == "asp")) {
 				// create and add a Component to the Container
-				var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
-				if (refMan == null) {
-					throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
+				bool isRunAtServer = false;
+				string id = string.Empty;
+				XName runatName = new XName ("runat");
+				XName idName = new XName ("id");
+				
+				foreach (XAttribute attr in element.Attributes) {
+					if (attr.Name.ToLower () == runatName) {
+						if (attr.Value == "server")
+							isRunAtServer = true;
+						else
+							break;
+					} else if (attr.Name.ToLower () == idName) {
+						id = attr.Value;
+					}
 				}
 				IComponent comp = null;
-				try {
-					string typeName = refMan.GetTypeName (element.Name.Prefix, element.Name.Name);
-					System.Type controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
-					comp = host.CreateComponent (controlType);
-				} catch (Exception ex) {
-					System.Diagnostics.Trace.WriteLine (ex.ToString ());
+				if (isRunAtServer && (id != string.Empty)) {
+					var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
+					if (refMan == null) {
+						throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
+					}
+					
+					try {
+						string typeName = refMan.GetTypeName (element.Name.Prefix, element.Name.Name);
+						System.Type controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
+						comp = host.CreateComponent (controlType, id);
+					} catch (Exception ex) {
+						System.Diagnostics.Trace.WriteLine (ex.ToString ());
+					}
 				}
-				
 				// genarete placeholder
 				// FIXME: get IDesigner for the added component
 				if (comp != null)

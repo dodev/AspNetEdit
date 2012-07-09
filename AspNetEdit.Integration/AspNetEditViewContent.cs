@@ -33,6 +33,7 @@
 using System;
 using System.IO;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 using Gtk;
 
 using Mono.Addins;
@@ -48,20 +49,21 @@ using MonoDevelop.SourceEditor;
 using MonoDevelop.Xml.StateEngine;
 
 using AspNetEdit.Editor;
+using AspNetEdit.Editor.ComponentModel;
 
 namespace AspNetEdit.Integration
 {
 	
-	public class AspNetEditViewContent : AbstractAttachableViewContent, IToolboxConsumer, IOutlinedDocument //, IEditableTextBuffer
+	public class AspNetEditViewContent : AbstractAttachableViewContent, IToolboxConsumer, IOutlinedDocument, IPropertyPadProvider //, IEditableTextBuffer
 	{
 		IViewContent viewContent;
 		EditorProcess editorProcess;
 		
 		Gtk.Socket designerSocket;
-		Gtk.Socket propGridSocket;
+//		Gtk.Socket propGridSocket;
 		
-		Frame propertyFrame;
-		DesignerFrame designerFrame;
+//		Frame propertyFrame;
+		Gtk.Frame designerFrame;
 		
 		MonoDevelop.Ide.Gui.Components.PadTreeView outlineView;
 		Gtk.TreeStore outlineStore;
@@ -70,21 +72,20 @@ namespace AspNetEdit.Integration
 		
 		bool activated = false;
 		bool suppressSerialisation = false;
-		static string extensionError = null;
 		
 		internal AspNetEditViewContent (IViewContent viewContent)
 		{
 			this.viewContent = viewContent;
 			
-			designerFrame = new DesignerFrame (this);
+			designerFrame = new Frame ();
 			designerFrame.CanFocus = true;
 			designerFrame.Shadow = ShadowType.None;
 			designerFrame.BorderWidth = 0;
 			
-			propertyFrame = new Frame ();
-			propertyFrame.CanFocus = true;
-			propertyFrame.Shadow = ShadowType.None;
-			propertyFrame.BorderWidth = 0;
+//			propertyFrame = new Frame ();
+//			propertyFrame.CanFocus = true;
+//			propertyFrame.Shadow = ShadowType.None;
+//			propertyFrame.BorderWidth = 0;
 			
 			viewContent.WorkbenchWindow.Closing += workbenchWindowClosingHandler;
 			viewContent.DirtyChanged += vcDirtyChanged;
@@ -149,9 +150,9 @@ namespace AspNetEdit.Integration
 			designerSocket.Show ();
 			designerFrame.Add (designerSocket);
 			
-			propGridSocket = new Gtk.Socket ();
-			propGridSocket.Show ();
-			propertyFrame.Add (propGridSocket);
+//			propGridSocket = new Gtk.Socket ();
+//			propGridSocket.Show ();
+//			propertyFrame.Add (propGridSocket);
 			
 			// FIXME: Runtime.ProcessService cannot load EditorProcess from AspNetEdit assembly
 			//editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
@@ -159,15 +160,15 @@ namespace AspNetEdit.Integration
 			
 			if (designerSocket.IsRealized)
 				editorProcess.AttachDesigner (designerSocket.Id);
-			if (propGridSocket.IsRealized)
-				editorProcess.AttachPropertyGrid (propGridSocket.Id);
+//			if (propGridSocket.IsRealized)
+//				editorProcess.AttachPropertyGrid (propGridSocket.Id);
 			
 			designerSocket.Realized += delegate {
 				editorProcess.AttachDesigner (designerSocket.Id);
 			};
-			propGridSocket.Realized += delegate {
-				editorProcess.AttachPropertyGrid (propGridSocket.Id);
-			};
+//			propGridSocket.Realized += delegate {
+//				editorProcess.AttachPropertyGrid (propGridSocket.Id);
+//			};
 			
 			//designerSocket.FocusOutEvent += delegate {
 			//	MonoDevelop.DesignerSupport.DesignerSupport.Service.PropertyPad.BlankPad (); };
@@ -194,7 +195,8 @@ namespace AspNetEdit.Integration
 			editorProcess.Initialise (proxy, srcEditor, doc);
 			
 			activated = true;
-			
+
+			// TODO: update the tree on changes in the Dom
 			BuildTreeStore (doc.XDocument);
 			
 			//FIXME: track 'dirtiness' properly
@@ -414,30 +416,65 @@ namespace AspNetEdit.Integration
 				}
 			}
 			
-			if (isRunAtServer && (id != string.Empty)) {
-				// we have a winner! pass it forward on the chain
+			if (isRunAtServer && (id != string.Empty) && (editorProcess != null)) {
+
+				// TODO: Add a unique field to editable nodes. the id of the node is not guaranteed to be the component's Site.Name
+				IComponent selected = editorProcess.Editor.DesignerHost.GetComponent (id);
+
+				if (selected != null) {
+					var properties = TypeDescriptor.GetProperties (selected) as PropertyDescriptorCollection;
+
+					var selServ = editorProcess.Editor.Services.GetService (typeof (ISelectionService)) as ISelectionService;
+					selServ.SetSelectedComponents (new IComponent[] {selected});
+				}
 			}
 		}
 		
 		#endregion DocumentOutline stuff
-		
-		class DesignerFrame: Frame, ICustomPropertyPadProvider
+
+		#region IPropertyPadProvider implementation
+		public object GetActiveComponent ()
 		{
-			AspNetEditViewContent view;
-			
-			public DesignerFrame (AspNetEditViewContent view)
-			{
-				this.view = view;
-			}
-			
-			Gtk.Widget ICustomPropertyPadProvider.GetCustomPropertyWidget ()
-			{
-				return view.propertyFrame;
-			}
-			
-			void ICustomPropertyPadProvider.DisposeCustomPropertyWidget ()
-			{
-			}
+			var selServ = editorProcess.Editor.Services.GetService (typeof (ISelectionService)) as ISelectionService;
+			if (selServ == null)
+				return null;
+
+			return selServ.PrimarySelection;
 		}
+
+		public object GetProvider ()
+		{
+			return GetActiveComponent ();
+		}
+
+		public void OnEndEditing (object obj)
+		{
+
+		}
+
+		public void OnChanged (object obj)
+		{
+			// TODO: handle changed object
+		}
+		#endregion
+		
+//		class DesignerFrame: Frame//, ICustomPropertyPadProvider
+//		{
+//			AspNetEditViewContent view;
+//			
+//			public DesignerFrame (AspNetEditViewContent view)
+//			{
+//				this.view = view;
+//			}
+			
+//			Gtk.Widget ICustomPropertyPadProvider.GetCustomPropertyWidget ()
+//			{
+//				return view.propertyFrame;
+//			}
+//			
+//			void ICustomPropertyPadProvider.DisposeCustomPropertyWidget ()
+//			{
+//			}
+//		}
 	}
 }

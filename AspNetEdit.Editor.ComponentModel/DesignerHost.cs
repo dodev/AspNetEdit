@@ -120,6 +120,11 @@ namespace AspNetEdit.Editor.ComponentModel
 			return CreateComponent (componentClass, null);
 		}
 
+		public IComponent GetComponent (string name)
+		{
+			return container.GetComponent (name);
+		}
+
 		public void DestroyComponent (IComponent component)
 		{
 			//deselect it if selected

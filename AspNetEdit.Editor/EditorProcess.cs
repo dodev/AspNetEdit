@@ -57,9 +57,9 @@ namespace AspNetEdit.Editor
 	{
 		EditorHost host;
 		Frame webKitFrame;
-		PropertyGrid propertyGrid;
+//		PropertyGrid propertyGrid;
 		
-		public EditorProcess ()
+		public EditorProcess () : base ()
 		{
 			#if TRACE
 				System.Diagnostics.TextWriterTraceListener listener = new System.Diagnostics.TextWriterTraceListener (System.Console.Out);
@@ -86,14 +86,14 @@ namespace AspNetEdit.Editor
 		{
 			//remove the grid in case it was the source of the exception, as GTK# expose exceptions can fire repeatedly
 			//also user should not be able to edit things when showing exceptions
-			if (propertyGrid != null) {
-				Gtk.Container parent = propertyGrid.Parent as Gtk.Container;
-				if (parent != null)
-					parent.Remove (propertyGrid);
-				
-				propertyGrid.Destroy ();
-				propertyGrid = null;
-			}
+//			if (propertyGrid != null) {
+//				Gtk.Container parent = propertyGrid.Parent as Gtk.Container;
+//				if (parent != null)
+//					parent.Remove (propertyGrid);
+//				
+//				propertyGrid.Destroy ();
+//				propertyGrid = null;
+//			}
 			
 			//show the error message
 			base.HandleError (e);
@@ -116,9 +116,9 @@ namespace AspNetEdit.Editor
 			base.DesignerWidget = outerBox;
 			
 			//grid picks up some services from the designer host
-			propertyGrid = new PropertyGrid (host.Services);
-			propertyGrid.ShowAll ();
-			base.PropertyGridWidget = propertyGrid;
+//			propertyGrid = new PropertyGrid (host.Services);
+//			propertyGrid.ShowAll ();
+//			base.PropertyGridWidget = propertyGrid;
 			System.Diagnostics.Trace.WriteLine ("Built AspNetEdit GUI");
 		}
 		
