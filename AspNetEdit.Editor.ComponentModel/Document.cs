@@ -394,39 +394,40 @@ namespace AspNetEdit.Editor.ComponentModel
 		///<summary>Renders the designer html for an ASP.NET Control</summary>
 		public static string RenderDesignerControl (Control control)
 		{
-			string height = "auto";
-			string width = "auto";
-			string canResize = "true";
-			string canDrop = "false";
-			string id = control.UniqueID;
-			
-			WebControl wc = control as WebControl;
-			if (wc != null) {
-				height = wc.Height.ToString ();
-				width = wc.Width.ToString ();
-			}
-			else
-			{
-				canResize = "false";
-			}
-			
-			//TODO: is there a better way to make tiny controls appear a decent size?
-			if (height == "" || height == "auto") height = "20px";
-			if (width == "" || width == "auto") width = "20px";
-			
-			//render the control
-			//TODO: use designer, when they're written
-			
-			OnPreRenderMethodInfo.Invoke (control, new object[] {EventArgs.Empty});
-			System.IO.StringWriter strWriter = new System.IO.StringWriter ();
-			System.Web.UI.HtmlTextWriter writer = new System.Web.UI.HtmlTextWriter (strWriter);
-			control.RenderControl (writer);
-			writer.Close ();
-			strWriter.Flush ();
-			string content = strWriter.ToString ();
-			strWriter.Close ();
-			
-			return string.Format (ControlSubstituteStructure, id, width, height, canDrop, canResize, content);
+//			string height = "auto";
+//			string width = "auto";
+//			string canResize = "true";
+//			string canDrop = "false";
+//			string id = control.UniqueID;
+//			
+//			WebControl wc = control as WebControl;
+//			if (wc != null) {
+//				height = wc.Height.ToString ();
+//				width = wc.Width.ToString ();
+//			}
+//			else
+//			{
+//				canResize = "false";
+//			}
+//			
+//			//TODO: is there a better way to make tiny controls appear a decent size?
+//			if (height == "" || height == "auto") height = "20px";
+//			if (width == "" || width == "auto") width = "20px";
+//			
+//			//render the control
+//			//TODO: use designer, when they're written
+//			
+//			OnPreRenderMethodInfo.Invoke (control, new object[] {EventArgs.Empty});
+//			System.IO.StringWriter strWriter = new System.IO.StringWriter ();
+//			System.Web.UI.HtmlTextWriter writer = new System.Web.UI.HtmlTextWriter (strWriter);
+//			control.RenderControl (writer);
+//			writer.Close ();
+//			strWriter.Flush ();
+//			string content = strWriter.ToString ();
+//			strWriter.Close ();
+//			
+//			return string.Format (ControlSubstituteStructure, id, width, height, canDrop, canResize, content);
+			return string.Empty;
 		}
 		
 		#endregion
@@ -501,19 +502,20 @@ namespace AspNetEdit.Editor.ComponentModel
 		/// <returns>A placeholder identifier that can be used in the document</returns>
 		public string AddDirective (string name, IDictionary values)
 		{
-			if ((0 == String.Compare (name, "Page", true, CultureInfo.InvariantCulture) && directives["Page"] != null)
-				|| (0 == String.Compare (name, "Control", true, CultureInfo.InvariantCulture) && directives["Control"] != null))
-				throw new Exception ("Only one Page or Control directive is allowed in a document");
-
-			DocumentDirective directive = new DocumentDirective (name, values, directivePlaceholderKey);
-			directivePlaceholderKey++;
-
-			if (directives[name] == null)
-				directives[name] = new ArrayList ();
-
-			((ArrayList)directives[name]).Add(directive);
-
-			return String.Format(DirectivePlaceholderStructure, directive.Key.ToString ());
+//			if ((0 == String.Compare (name, "Page", true, CultureInfo.InvariantCulture) && directives["Page"] != null)
+//				|| (0 == String.Compare (name, "Control", true, CultureInfo.InvariantCulture) && directives["Control"] != null))
+//				throw new Exception ("Only one Page or Control directive is allowed in a document");
+//
+//			DocumentDirective directive = new DocumentDirective (name, values, directivePlaceholderKey);
+//			directivePlaceholderKey++;
+//
+//			if (directives[name] == null)
+//				directives[name] = new ArrayList ();
+//
+//			((ArrayList)directives[name]).Add(directive);
+//
+//			return String.Format(DirectivePlaceholderStructure, directive.Key.ToString ());
+			return string.Empty;
 		}
 
 		public string RemoveDirective (int placeholderId)

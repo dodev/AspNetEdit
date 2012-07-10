@@ -35,6 +35,7 @@ using System.ComponentModel.Design;
 using System.ComponentModel.Design.Serialization;
 using System.Collections;
 using System.Web.UI;
+using MonoDevelop.AspNet.Parser;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -117,8 +118,9 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 			
 			//add references to referenceManager, unless root component
-			if (components.Count != 1)
-				host.WebFormReferenceManager.AddReference (component.GetType ());
+			WebFormReferenceManager refMan = host.GetService (typeof (WebFormReferenceManager)) as WebFormReferenceManager;
+			if ((components.Count != 1) && (refMan != null))
+				refMan.AddReference (component.GetType ());
 
 			//Finally put in container
 			components.Add (component);

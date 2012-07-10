@@ -48,26 +48,22 @@ namespace AspNetEdit.Editor.ComponentModel
 	public class DesignerHost : IDesignerHost, IDisposable
 	{
 		private ServiceContainer parentServices;
-		private WebFormReferenceManager referenceManager;
+		//private WebFormReferenceManager referenceManager;
 
 		public DesignerHost (ServiceContainer parentServices)
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
-			// FIXME: use AspNetAppProject for the current project
-			//referenceManager = new WebFormReferenceManager (new AspNetAppProject());
-			referenceManager = new AspNetEdit.Editor.ComponentModel.WebFormReferenceManager (this);
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
 			parentServices.AddService (typeof (IComponentChangeService), container);
-			parentServices.AddService (typeof (IWebFormReferenceManager), referenceManager);		
 		}
 
-		public WebFormReferenceManager WebFormReferenceManager
-		{
-			get { return referenceManager; }
-		}
+//		public WebFormReferenceManager WebFormReferenceManager
+//		{
+//			get { return referenceManager; }
+//		}
 
 		#region Component management
 

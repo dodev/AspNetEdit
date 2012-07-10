@@ -37,6 +37,7 @@ using System.Drawing.Design;
 using System.ComponentModel.Design.Serialization;
 using System.IO;
 
+using MonoDevelop.AspNet;
 using MonoDevelop.AspNet.Parser;
 using MonoDevelop.Core.Execution;
 using MonoDevelop.Core;
@@ -55,7 +56,6 @@ namespace AspNetEdit.Editor
 	public class EditorProcess : RemoteDesignerProcess
 	{
 		EditorHost host;
-		ServiceContainer services;
 		Frame webKitFrame;
 		PropertyGrid propertyGrid;
 		
@@ -70,7 +70,7 @@ namespace AspNetEdit.Editor
 		public void Initialise (MonoDevelopProxy proxy, SourceEditorView srcEditor, AspNetParsedDocument doc)
 		{
 			System.Diagnostics.Trace.WriteLine ("Creating AspNetEdit EditorHost");
-			host = new EditorHost (proxy);
+			host = new EditorHost (proxy, (AspNetAppProject)srcEditor.Project, doc);
 			host.Initialise (srcEditor , doc);
 			System.Diagnostics.Trace.WriteLine ("Created AspNetEdit EditorHost");
 			

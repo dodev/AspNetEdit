@@ -122,12 +122,12 @@ namespace AspNetEdit.Editor.UI
 //			//base.LoadUrl (geckoChrome);
 //		}
 		
-		public void Destroy ()
-		{
-			System.Diagnostics.Trace.WriteLine ("RootDesignerView internally destroyed.");
-			active = false;
-			base.Dispose ();
-		}
+//		public void Destroy ()
+//		{
+//			System.Diagnostics.Trace.WriteLine ("RootDesignerView internally destroyed.");
+//			active = false;
+//			base.Dispose ();
+//		}
 
 		#region Change service handlers
 /*

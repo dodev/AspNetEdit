@@ -38,6 +38,7 @@ using System.ComponentModel.Design.Serialization;
 using MonoDevelop.Ide;
 using MonoDevelop.Ide.Gui;
 using MonoDevelop.DesignerSupport.Toolbox;
+using MonoDevelop.AspNet;
 using MonoDevelop.AspNet.Parser;
 using MonoDevelop.SourceEditor;
 
@@ -55,21 +56,31 @@ namespace AspNetEdit.Editor
 		RootDesignerView designerView;
 		MonoDevelopProxy proxy;
 		
-		public EditorHost (MonoDevelopProxy proxy)
+		public EditorHost (MonoDevelopProxy proxy, AspNetAppProject project, AspNetParsedDocument aspParsedDoc)
 		{
 			this.proxy = proxy;
 			
 			//set up the services
 			services = new ServiceContainer ();
-			services.AddService (typeof (INameCreationService), new NameCreationService ());
-			services.AddService (typeof (ISelectionService), new SelectionService ());
-			services.AddService (typeof (ITypeResolutionService), new TypeResolutionService ());
-			services.AddService (typeof (IEventBindingService), new AspNetEdit.Editor.ComponentModel.EventBindingService (proxy));
+			services.AddService (typeof(INameCreationService), new NameCreationService ());
+			services.AddService (typeof(ISelectionService), new SelectionService ());
+			services.AddService (typeof(ITypeResolutionService), new TypeResolutionService ());
+			services.AddService (
+				typeof(IEventBindingService),
+				new AspNetEdit.Editor.ComponentModel.EventBindingService (proxy)
+			);
 			ExtenderListService extListServ = new ExtenderListService ();
-			services.AddService (typeof (IExtenderListService), extListServ);
-			services.AddService (typeof (IExtenderProviderService), extListServ);
-			services.AddService (typeof (ITypeDescriptorFilterService), new TypeDescriptorFilterService ());
+			services.AddService (typeof(IExtenderListService), extListServ);
+			services.AddService (typeof(IExtenderProviderService), extListServ);
+			services.AddService (typeof(ITypeDescriptorFilterService), new TypeDescriptorFilterService ());
 			//services.AddService (typeof (IToolboxService), toolboxService);
+			
+			WebFormReferenceManager refMan = new WebFormReferenceManager (project);
+			refMan.Doc = aspParsedDoc;
+			services.AddService (
+				typeof(WebFormReferenceManager),
+				refMan
+			);
 			
 			System.Diagnostics.Trace.WriteLine ("Creating DesignerHost");
 			designerHost = new DesignerHost (services);
@@ -84,8 +95,6 @@ namespace AspNetEdit.Editor
 		public void Initialise (SourceEditorView srcEditor, AspNetParsedDocument doc)
 		{
 			DispatchService.AssertGuiThread ();
-			
-			//services.AddService (typeof(WebFormReferenceManager), new WebFormReferenceManager (srcEditor.Project));
 			
 			System.Diagnostics.Trace.WriteLine ("Loading document into DesignerHost");
 			if (doc != null)
@@ -153,7 +162,7 @@ namespace AspNetEdit.Editor
 					//if it's present
 					if (tda != null && tda.Data.Length > 0) {
 						//look up the tag's prefix and insert it into the data						
-						AspNetEdit.Editor.ComponentModel.WebFormReferenceManager webRef = designerHost.GetService (typeof(AspNetEdit.Editor.ComponentModel.WebFormReferenceManager)) as AspNetEdit.Editor.ComponentModel.WebFormReferenceManager;
+						WebFormReferenceManager webRef = designerHost.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
 						if (webRef == null)
 							throw new Exception("Host does not provide an IWebFormReferenceManager");
 						string aspText = String.Format (tda.Data, webRef.GetTagPrefix (controlType));
