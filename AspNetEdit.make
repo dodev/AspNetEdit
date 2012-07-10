@@ -32,6 +32,10 @@ extension_name = aspdesigner
 extension_jar = $(shell pwd)/$(BUILD_DIR)/$(extension_name).jar
 
 FILES =  \
+	AspNetEdit.Editor.ComponentModel.Design/BaseWebControlDesigner.cs \
+	AspNetEdit.Editor.ComponentModel.Design/ButtonDesigner.cs \
+	AspNetEdit.Editor.ComponentModel.Design/LabelDesigner.cs \
+	AspNetEdit.Editor.ComponentModel.Design/TextBoxDesigner.cs \
 	AspNetEdit.Editor.ComponentModel/DesignContainer.cs \
 	AspNetEdit.Editor.ComponentModel/DesignerHost.cs \
 	AspNetEdit.Editor.ComponentModel/Document.cs \
@@ -49,6 +53,7 @@ FILES =  \
 	AspNetEdit.Editor.ComponentModel/TypeResolutionService.cs \
 	AspNetEdit.Editor.ComponentModel/WebFormPage.cs \
 	AspNetEdit.Editor.ComponentModel/WebFormReferenceManager.cs \
+	AspNetEdit.Editor.ComponentModel/WebTypeDescriptor.cs \
 	AspNetEdit.Editor.Persistence/ControlPersister.cs \
 	AspNetEdit.Editor.Persistence/DesignTimeParser.cs \
 	AspNetEdit.Editor.Persistence/HtmlParsingObject.cs \

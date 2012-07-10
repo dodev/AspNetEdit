@@ -166,10 +166,6 @@
       <Private>False</Private>
       <Package>monodevelop</Package>
     </Reference>
-    <Reference Include="ICSharpCode.NRefactory.CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=efe927acf176eea2">
-      <Private>False</Private>
-      <Package>monodevelop</Package>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
@@ -205,6 +201,11 @@
     <Compile Include="AspNetEdit.JSCall\CommandManager.cs" />
     <Compile Include="AspNetEdit.JSCall\InvalidJSArgumentException.cs" />
     <Compile Include="AspNetEdit.Editor\EditorProcess.cs" />
+    <Compile Include="AspNetEdit.Editor.ComponentModel\WebTypeDescriptor.cs" />
+    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\ButtonDesigner.cs" />
+    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\BaseWebControlDesigner.cs" />
+    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\TextBoxDesigner.cs" />
+    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\LabelDesigner.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AspNetEdit.addin.xml">
@@ -233,4 +234,7 @@
       </Properties>
     </MonoDevelop>
   </ProjectExtensions>
+  <ItemGroup>
+    <Folder Include="AspNetEdit.Editor.ComponentModel.Design\" />
+  </ItemGroup>
 </Project>

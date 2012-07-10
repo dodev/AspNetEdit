@@ -46,6 +46,7 @@ using MonoDevelop.AspNet.StateEngine;
 using MonoDevelop.SourceEditor;
 
 using ICSharpCode.NRefactory;
+using AspNetEdit.Editor.ComponentModel.Design;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -207,9 +208,13 @@ namespace AspNetEdit.Editor.ComponentModel
 				}
 				// genarete placeholder
 				// FIXME: get IDesigner for the added component
-				if (comp != null)
-					return "<div style=\"width:100px; height:20px; background-color: #e3e3e3; color: #670023;\">" + comp.Site.Name + "</div>";
-				else
+				if (comp != null) {
+					var designer = host.GetDesigner (comp) as BaseWebControlDesigner;
+					if (designer != null)
+						return designer.GetDesignTimeHtml ();
+					else
+						return string.Empty;
+				} else
 					return string.Empty;
 				// TODO: handle different types of controls differently
 				// TODO: handle nested controls
