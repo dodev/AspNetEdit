@@ -206,19 +206,22 @@ namespace AspNetEdit.Editor.ComponentModel
 						System.Diagnostics.Trace.WriteLine (ex.ToString ());
 					}
 				}
+
+				var control = comp as WebControl;
+
 				// genarete placeholder
-				// FIXME: get IDesigner for the added component
-				if (comp != null) {
-					var designer = host.GetDesigner (comp) as BaseWebControlDesigner;
-					if (designer != null)
-						return designer.GetDesignTimeHtml ();
-					else
-						return string.Empty;
+				if (control != null) {
+					System.IO.StringWriter strWriter = new System.IO.StringWriter ();
+					System.Web.UI.HtmlTextWriter writer = new System.Web.UI.HtmlTextWriter (strWriter);
+					control.Page.EnableEventValidation = false;
+					control.RenderControl (writer);
+					writer.Close ();
+					strWriter.Flush ();
+					string content = strWriter.ToString ();
+					strWriter.Close ();
+					return content;
 				} else
 					return string.Empty;
-				// TODO: handle different types of controls differently
-				// TODO: handle nested controls
-				// TODO: parse attributes for some info of the node
 			}
 			
 			// the node is a html element
