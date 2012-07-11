@@ -198,7 +198,7 @@ namespace AspNetEdit.Editor
 			
 			System.Diagnostics.Trace.WriteLine ("Persisting document.");
 			//doc = designerHost.PersistDocument ();
-			doc = designerHost.GetEditableAspNetCode ();
+			//doc = designerHost.GetEditableAspNetCode ();
 				
 			return doc;
 		}

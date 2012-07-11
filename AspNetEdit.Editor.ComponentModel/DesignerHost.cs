@@ -353,16 +353,9 @@ namespace AspNetEdit.Editor.ComponentModel
 			// TODO: strip user's JS. Add AspNetEdit's JS
 			// TODO: IDesigners for ASP.NET controls components
 			
-			return  rootDocument.ToDesignableHtml ();
+			return  rootDocument.ToDesignTimeHtml ();
 		}
 
-		public string GetEditableAspNetCode ()
-		{
-			
-			return rootDocument.ToAspNetCode ();
-		}
-		
-		
 		public void Reset ()
 		{
 			//container automatically destroys all children when this happens

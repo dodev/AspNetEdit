@@ -46,6 +46,7 @@ using MonoDevelop.AspNet.StateEngine;
 using MonoDevelop.SourceEditor;
 
 using ICSharpCode.NRefactory;
+using ICSharpCode.NRefactory.TypeSystem;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -53,21 +54,19 @@ namespace AspNetEdit.Editor.ComponentModel
 	{
 		public static readonly string newDocument = "<html>\n<head>\n\t<title>{0}</title>\n</head>\n<body>\n<form runat=\"server\">\n\n</form></body>\n</html>";
 
-		string document;
 		Hashtable directives;
-		private int directivePlaceholderKey = 0;
 
 		private Control parent;
 		private DesignerHost host;
 		
-		AspNetParsedDocument aspDoc;
+		AspNetParsedDocument aspNetDoc;
 		SourceEditorView srcEditor;
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
 		{
 			initDocument (parent, host);
-			this.document = String.Format (newDocument, documentName);
+			parse (String.Format (newDocument, documentName), documentName);
 		}
 		
 		///<summary>Creates a document from an existing file</summary>
@@ -75,12 +74,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			initDocument (parent, host);
 			this.srcEditor = srcEditorView;
-			this.aspDoc = doc;
-			
-			Control[] controls;
-			
-			//aspParser.ProcessFragment (document, out controls, out this.document);
-			parse (srcEditor.Text, aspDoc.FileName);
+			this.aspNetDoc = doc;
 		}
 		
 		private void initDocument (Control parent, DesignerHost host)
@@ -95,49 +89,31 @@ namespace AspNetEdit.Editor.ComponentModel
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
 			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-			
-			//this.aspParser = new DesignTimeParser (host, this);
-			xDom = null;
 		}
 
 		#region StateEngine parser
 		
-		MonoDevelop.Xml.StateEngine.XDocument xDom;
-		
 		void parse (string doc, string fileName)
 		{
-			MonoDevelop.Xml.StateEngine.Parser parser = new MonoDevelop.Xml.StateEngine.Parser (
-				new MonoDevelop.AspNet.StateEngine.AspNetFreeState (),
-				true
-			);
+			var parser = new AspNetParser ();
 
 			using (StringReader strRd = new StringReader (doc)) {
-				parser.Parse (strRd);
+				aspNetDoc = parser.Parse (true, fileName, strRd, srcEditor.Project) as AspNetParsedDocument;
 			}
-
-			xDom = parser.Nodes.GetRoot ();
 		}
 		
 		#endregion
 		
 		#region Designer communication
-		
 
-		public string ToDesignableHtml ()
+		public string ToDesignTimeHtml ()
 		{
 			string doc = null;
-			if (xDom != null) {
-				doc = serializeNode (xDom.RootElement);
+			if (aspNetDoc.XDocument != null) {
+				doc = serializeNode (aspNetDoc.XDocument.RootElement);
 			}
 
 			return doc;
-		}
-		
-		public string ToAspNetCode ()
-		{
-			// TODO: serialize the DOM tree to ASP.NET
-			
-			return string.Empty;
 		}
 		#endregion
 		
@@ -173,35 +149,23 @@ namespace AspNetEdit.Editor.ComponentModel
 			// checking for a ASP.NET server control
 			if (element.Name.HasPrefix && (element.Name.Prefix == "asp")) {
 				// create and add a Component to the Container
-				bool isRunAtServer = false;
 				string id = string.Empty;
-				XName runatName = new XName ("runat");
 				XName idName = new XName ("id");
-				
+
+				// TODO: parse attributes for Control's properties
 				foreach (XAttribute attr in element.Attributes) {
-					if (attr.Name.ToLower () == runatName) {
-						if (attr.Value == "server")
-							isRunAtServer = true;
-						else
-							break;
-					} else if (attr.Name.ToLower () == idName) {
+					if (attr.Name.ToLower () == idName) {
 						id = attr.Value;
+						break;
 					}
 				}
+
 				IComponent comp = null;
-				if (isRunAtServer && (id != string.Empty)) {
-					var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
-					if (refMan == null) {
-						throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
-					}
-					
-					try {
-						string typeName = refMan.GetTypeName (element.Name.Prefix, element.Name.Name);
-						System.Type controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
-						comp = host.CreateComponent (controlType, id);
-					} catch (Exception ex) {
-						System.Diagnostics.Trace.WriteLine (ex.ToString ());
-					}
+				try {
+					comp = ProcessControl (element);
+					this.host.Container.Add (comp,id);
+				} catch (Exception ex) {
+					System.Diagnostics.Trace.WriteLine (ex.ToString ());
 				}
 
 				var control = comp as WebControl;
@@ -210,7 +174,6 @@ namespace AspNetEdit.Editor.ComponentModel
 				if (control != null) {
 					StringWriter strWriter = new StringWriter ();
 					HtmlTextWriter writer = new HtmlTextWriter (strWriter);
-					control.Page.EnableEventValidation = false;
 					control.RenderControl (writer);
 					writer.Close ();
 					strWriter.Flush ();
@@ -238,12 +201,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				// serializing the childnodes if any
 				foreach (MonoDevelop.Xml.StateEngine.XNode nd in element.Nodes) {
 					// get the text before the openning tag of the child element
-					output += srcEditor.TextEditor.GetTextBetween (
-							prevTagLocation.Line,
-							prevTagLocation.Column,
-							nd.Region.BeginLine,
-							nd.Region.BeginColumn
-					);
+					output += GetTextFromEditor (prevTagLocation, nd.Region.Begin);
 					// and the element itself
 					output += serializeNode (nd);
 				}
@@ -276,12 +234,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				}
 				
 				if (element.ClosingTag != null) {
-					output += srcEditor.TextEditor.GetTextBetween (
-						lastChildEndLine,
-						lastChildEndColumn,
-						element.ClosingTag.Region.BeginLine,
-						element.ClosingTag.Region.BeginColumn
-					);
+					output += GetTextFromEditor (new TextLocation (lastChildEndLine, lastChildEndColumn), element.ClosingTag.Region.Begin);
 					prevTagLocation = element.ClosingTag.Region.End;
 				} else {
 					// TODO: the element is not closed. Warn the user
@@ -292,10 +245,58 @@ namespace AspNetEdit.Editor.ComponentModel
 			
 			return output;
 		}
-		
+
+		private string GetTextFromEditor (TextLocation start, TextLocation end)
+		{
+			if (srcEditor == null)
+				throw new NullReferenceException ("The SourceEditorView is not set. Can't process document for text nodes.");
+
+			return srcEditor.TextEditor.GetTextBetween (start.Line, start.Column, end.Line, end.Column);
+		}
+
+		private IComponent ProcessControl (XElement element)
+		{
+			var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
+			if (refMan == null) {
+				throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
+			}
+			string typeName = refMan.GetTypeName (element.Name.Prefix, element.Name.Name);
+			System.Type controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
+			IComponent component = Activator.CreateInstance (controlType) as IComponent;
+
+			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (controlType);
+			PropertyDescriptor desc = null;
+
+			foreach (XAttribute attr in element.Attributes) {
+				desc = pCollection.Find (attr.Name.Name, true);
+				if (desc != null) {
+					if (desc.PropertyType == typeof (string))
+						desc.SetValue (component, attr.Value);
+					else if (desc.PropertyType == typeof (uint)) {
+						uint val = 0;
+						uint.TryParse (attr.Value, out val);
+						desc.SetValue (component, val);
+					} else if (desc.PropertyType == typeof (int)) {
+						int val = 0;
+						int.TryParse (attr.Value, out val);
+						desc.SetValue (component, val);
+					} else if (desc.PropertyType == typeof (bool)) {
+						bool val = false;
+						bool.TryParse (attr.Value,out val);
+						desc.SetValue (component, val);
+					} else if (desc.PropertyType == typeof (System.Drawing.Color))
+						desc.SetValue (component, System.Drawing.Color.FromName (attr.Value));
+					else if (desc.PropertyType == typeof (System.EventHandler)) {
+						// TODO: get EventHandler from string !?
+					}
+
+				}
+			}
+
+			return component;
+		}
+
 		#endregion
-		
-	
 		
 		//we need this to invoke protected member before rendering
 		private static MethodInfo onPreRenderMethodInfo;
