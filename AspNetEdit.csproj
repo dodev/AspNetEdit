@@ -90,10 +90,6 @@
       <Private>False</Private>
       <Package>monodevelop-core-addins</Package>
     </Reference>
-    <Reference Include="MonoDevelop.SourceEditor2, Version=2.6.0.0, Culture=neutral">
-      <Private>False</Private>
-      <Package>monodevelop-core-addins</Package>
-    </Reference>
     <Reference Include="Mono.Addins, Version=0.6.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756">
       <Private>False</Private>
     </Reference>
@@ -128,10 +124,6 @@
       <Package>monodevelop-core-addins</Package>
     </Reference>
     <Reference Include="MonoDevelop.Debugger.Soft, Version=2.6.0.0, Culture=neutral">
-      <Private>False</Private>
-      <Package>monodevelop-core-addins</Package>
-    </Reference>
-    <Reference Include="MonoDevelop.Gettext, Version=2.6.0.0, Culture=neutral">
       <Private>False</Private>
       <Package>monodevelop-core-addins</Package>
     </Reference>
@@ -170,12 +162,6 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="AspNetEdit.Integration\AspNetEditDisplayBinding.cs" />
-    <Compile Include="AspNetEdit.Editor.Persistence\ControlPersister.cs" />
-    <Compile Include="AspNetEdit.Editor.Persistence\DesignTimeParser.cs" />
-    <Compile Include="AspNetEdit.Editor.Persistence\HtmlParsingObject.cs" />
-    <Compile Include="AspNetEdit.Editor.Persistence\ParsingObject.cs" />
-    <Compile Include="AspNetEdit.Editor.Persistence\RootParsingObject.cs" />
-    <Compile Include="AspNetEdit.Editor.Persistence\ServerControlParsingObject.cs" />
     <Compile Include="AspNetEdit.Editor.ComponentModel\DesignContainer.cs" />
     <Compile Include="AspNetEdit.Editor.ComponentModel\DesignerHost.cs" />
     <Compile Include="AspNetEdit.Editor.ComponentModel\Document.cs" />
@@ -191,21 +177,13 @@
     <Compile Include="AspNetEdit.Editor.ComponentModel\TypeDescriptorFilterService.cs" />
     <Compile Include="AspNetEdit.Editor.ComponentModel\TypeResolutionService.cs" />
     <Compile Include="AspNetEdit.Editor.ComponentModel\WebFormPage.cs" />
-    <Compile Include="AspNetEdit.Editor.ComponentModel\WebFormReferenceManager.cs" />
     <Compile Include="AspNetEdit.Editor.UI\PropertyGrid.cs" />
     <Compile Include="AspNetEdit.Editor.UI\RootDesignerView.cs" />
     <Compile Include="AspNetEdit.Integration\AspNetEditViewContent.cs" />
     <Compile Include="AspNetEdit.Editor\EditorHost.cs" />
     <Compile Include="AspNetEdit.Integration\MonoDevelopProxy.cs" />
     <Compile Include="AspNetEdit.Editor.ComponentModel\EventBindingService.cs" />
-    <Compile Include="AspNetEdit.JSCall\CommandManager.cs" />
-    <Compile Include="AspNetEdit.JSCall\InvalidJSArgumentException.cs" />
     <Compile Include="AspNetEdit.Editor\EditorProcess.cs" />
-    <Compile Include="AspNetEdit.Editor.ComponentModel\WebTypeDescriptor.cs" />
-    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\ButtonDesigner.cs" />
-    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\BaseWebControlDesigner.cs" />
-    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\TextBoxDesigner.cs" />
-    <Compile Include="AspNetEdit.Editor.ComponentModel.Design\LabelDesigner.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AspNetEdit.addin.xml">
@@ -234,7 +212,4 @@
       </Properties>
     </MonoDevelop>
   </ProjectExtensions>
-  <ItemGroup>
-    <Folder Include="AspNetEdit.Editor.ComponentModel.Design\" />
-  </ItemGroup>
 </Project>

@@ -46,7 +46,6 @@ using MonoDevelop.AspNet.StateEngine;
 using MonoDevelop.SourceEditor;
 
 using ICSharpCode.NRefactory;
-using AspNetEdit.Editor.ComponentModel.Design;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -95,9 +94,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (!host.Loading)
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
-			CaseInsensitiveHashCodeProvider provider = new CaseInsensitiveHashCodeProvider (CultureInfo.InvariantCulture);
-			CaseInsensitiveComparer comparer = new CaseInsensitiveComparer (CultureInfo.InvariantCulture);
-			directives = new Hashtable (provider, comparer);
+			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
 			
 			//this.aspParser = new DesignTimeParser (host, this);
 			xDom = null;
@@ -211,8 +208,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				// genarete placeholder
 				if (control != null) {
-					System.IO.StringWriter strWriter = new System.IO.StringWriter ();
-					System.Web.UI.HtmlTextWriter writer = new System.Web.UI.HtmlTextWriter (strWriter);
+					StringWriter strWriter = new StringWriter ();
+					HtmlTextWriter writer = new HtmlTextWriter (strWriter);
 					control.Page.EnableEventValidation = false;
 					control.RenderControl (writer);
 					writer.Close ();
@@ -298,128 +295,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		
 		#endregion
 		
-		#region Serialisation stuff
-		
-		///<summary>Converts a designer document fragment to ASP.NET code</summary>
-		public string Serialize (string designerDocumentFragment)
-		{
-			if (host == null)
-				throw new Exception("The document cannot be persisted without a host");
-			
-			string serializedDoc = string.Empty;
-			StringWriter writer = new StringWriter ();
-			
-			//keep method argument meaningfully named, but keep code readable!
-			string frag = designerDocumentFragment;
-			int length = frag.Length;
-			
-			int pos = 0;
-			SMode mode = SMode.Free;
-			
-			while (pos < length)
-			{
-				char c = frag [pos];
-				
-				switch (mode)
-				{
-					//it's freely copying to output, but watching for a directive or control placeholder 
-					case SMode.Free:
-						if (c == '<')
-						{
-							if ((pos + 10 < length) && frag.Substring (pos + 1, 10) == "aspcontrol") {
-								mode = SMode.ControlId;
-								pos += 10;
-								break;
-							}
-							else if ((pos + 20 < length) && frag.Substring (pos + 1, 20) == "directiveplaceholder") {
-								mode = SMode.DirectiveId;
-								pos += 20;
-								break;
-							}
-						}
-						
-						writer.Write (c);
-						break;
-					
-					//it's found a directive placeholder and is scanning for the ID
-					case SMode.DirectiveId:
-						if (c == 'i' && (pos + 4 < length) && frag.Substring (pos, 4) == "id=\"") {
-							int idEnd = frag.IndexOf ('"', pos + 4 + 1);
-							if (idEnd == -1) throw new Exception ("Identifier was unterminated");
-							int id  = Int32.Parse (frag.Substring (pos + 4, (idEnd - pos - 4)));
-							
-							//TODO: more intelligent removal/copying of directives in case of fragments
-							//works fine with whole document.
-							string directive = RemoveDirective (id);
-							writer.Write (directive);				
-							
-							mode = SMode.DirectiveEnd;
-							pos = idEnd;
-						}
-						break;
-					
-					//it's found a control placeholder and is scanning for the ID
-					case SMode.ControlId:
-						if (c == 'i' && (pos + 4 < length) && frag.Substring (pos, 4) == "id=\"") {
-							int idEnd = frag.IndexOf("\"", pos + 4);
-							if (idEnd == -1) throw new Exception ("Identifier was unterminated");
-							string id  = frag.Substring (pos + 4, (idEnd - pos - 4));		
-							
-							DesignContainer dc = (DesignContainer) host.Container;
-							Control control = dc.GetComponent (id) as Control;
-							if (control == null) throw new Exception ("Could not retrieve control "+id);
-							//ControlPersister.PersistControl (writer, control);
-							
-							mode = SMode.ControlEnd;
-							pos = idEnd;
-						}
-						break;
-					
-					//it's found the control's ID and is looking for the end
-					case SMode.ControlEnd:
-						if (c == '<' && (pos + 13 < length) && frag.Substring (pos, 13) == "</aspcontrol>") {
-							pos += 12;
-							mode = SMode.Free;
-						}
-						break;
-					
-					//it's found the placeholder's ID and is looking for the end
-					case SMode.DirectiveEnd:
-						if (c == '/' && (pos + 2 < length) && frag.Substring (pos, 2) == "/>") {
-							pos += 1;
-							mode = SMode.Free;
-						}
-						break;
-				}
-				
-				pos++;
-			}
-			
-			serializedDoc = writer.ToString ();
-			writer.Close ();
-
-			return serializedDoc;
-		}
-		
-		public void InitialiseControls (IEnumerable controls)
-		{
-			foreach (Control c in controls)
-				InitialiseControl(c);
-		}
-		
-		public static void InitialiseControl (Control control)
-		{
-			OnInitMethodInfo.Invoke (control, new object[] {EventArgs.Empty});
-		}
-		
-		//modes for the Serializing parser
-		private enum SMode {
-			Free,
-			ControlId,
-			DirectiveId,
-			ControlEnd,
-			DirectiveEnd
-		}
+	
 		
 		//we need this to invoke protected member before rendering
 		private static MethodInfo onPreRenderMethodInfo;
@@ -433,47 +309,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				return onPreRenderMethodInfo;
 			}
 		}
-		
-		///<summary>Renders the designer html for an ASP.NET Control</summary>
-		public static string RenderDesignerControl (Control control)
-		{
-//			string height = "auto";
-//			string width = "auto";
-//			string canResize = "true";
-//			string canDrop = "false";
-//			string id = control.UniqueID;
-//			
-//			WebControl wc = control as WebControl;
-//			if (wc != null) {
-//				height = wc.Height.ToString ();
-//				width = wc.Width.ToString ();
-//			}
-//			else
-//			{
-//				canResize = "false";
-//			}
-//			
-//			//TODO: is there a better way to make tiny controls appear a decent size?
-//			if (height == "" || height == "auto") height = "20px";
-//			if (width == "" || width == "auto") width = "20px";
-//			
-//			//render the control
-//			//TODO: use designer, when they're written
-//			
-//			OnPreRenderMethodInfo.Invoke (control, new object[] {EventArgs.Empty});
-//			System.IO.StringWriter strWriter = new System.IO.StringWriter ();
-//			System.Web.UI.HtmlTextWriter writer = new System.Web.UI.HtmlTextWriter (strWriter);
-//			control.RenderControl (writer);
-//			writer.Close ();
-//			strWriter.Flush ();
-//			string content = strWriter.ToString ();
-//			strWriter.Close ();
-//			
-//			return string.Format (ControlSubstituteStructure, id, width, height, canDrop, canResize, content);
-			return string.Empty;
-		}
-		
-		#endregion
+
 		
 		//we need this to invoke protected member before rendering
 		private static MethodInfo onInitMethodInfo;

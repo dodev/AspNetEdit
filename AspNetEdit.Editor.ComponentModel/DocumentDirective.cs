@@ -75,9 +75,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			this.name = name;
 			this.key = key;
 
-			CaseInsensitiveHashCodeProvider provider = new CaseInsensitiveHashCodeProvider(CultureInfo.InvariantCulture);
-			CaseInsensitiveComparer comparer = new CaseInsensitiveComparer(CultureInfo.InvariantCulture);
-			this.properties = new Hashtable (provider, comparer);
+			this.properties = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
 			
 			if (properties != null)
 				foreach (DictionaryEntry de in properties) {

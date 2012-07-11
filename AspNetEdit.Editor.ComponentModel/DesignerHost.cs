@@ -48,7 +48,6 @@ namespace AspNetEdit.Editor.ComponentModel
 	public class DesignerHost : IDesignerHost, IDisposable
 	{
 		private ServiceContainer parentServices;
-		//private WebFormReferenceManager referenceManager;
 
 		public DesignerHost (ServiceContainer parentServices)
 		{
@@ -59,11 +58,6 @@ namespace AspNetEdit.Editor.ComponentModel
 			parentServices.AddService (typeof (IDesignerHost), this);
 			parentServices.AddService (typeof (IComponentChangeService), container);
 		}
-
-//		public WebFormReferenceManager WebFormReferenceManager
-//		{
-//			get { return referenceManager; }
-//		}
 
 		#region Component management
 
