@@ -32,9 +32,11 @@ using System;
 using System.Text;
 using System.Web.UI;
 using System.Web.UI.WebControls;
+using System.Web.UI.HtmlControls;
 using System.IO;
 using System.ComponentModel.Design;
 using System.Collections;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
@@ -146,13 +148,12 @@ namespace AspNetEdit.Editor.ComponentModel
 				return string.Empty; // TODO: serialize AspNetDom nodes with the right end location
 			}
 			
-			// checking for a ASP.NET server control
-			if (element.Name.HasPrefix && (element.Name.Prefix == "asp")) {
+			// checking for a ASP.NET server control OR HtmlControl
+			if (element.Name.HasPrefix || IsRunAtServer (element)) {
 				// create and add a Component to the Container
 				string id = string.Empty;
 				XName idName = new XName ("id");
 
-				// TODO: parse attributes for Control's properties
 				foreach (XAttribute attr in element.Attributes) {
 					if (attr.Name.ToLower () == idName) {
 						id = attr.Value;
@@ -163,7 +164,8 @@ namespace AspNetEdit.Editor.ComponentModel
 				IComponent comp = null;
 				try {
 					comp = ProcessControl (element);
-					this.host.Container.Add (comp,id);
+					if (comp != null)
+						this.host.Container.Add (comp, id);
 				} catch (Exception ex) {
 					System.Diagnostics.Trace.WriteLine (ex.ToString ());
 				}
@@ -180,12 +182,10 @@ namespace AspNetEdit.Editor.ComponentModel
 					string content = strWriter.ToString ();
 					strWriter.Close ();
 					return content;
-				} else
-					return string.Empty;
+				}
 			}
 			
 			// the node is a html element
-			
 			string output = "<" + element.Name.FullName;
 			
 			// print the attributes... TODO: watchout for runat="server"
@@ -257,12 +257,24 @@ namespace AspNetEdit.Editor.ComponentModel
 		private IComponent ProcessControl (XElement element)
 		{
 			// get the control's Type
-			var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
-			if (refMan == null) {
-				throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
+			System.Type controlType = null;
+
+			if (element.Name.HasPrefix) {
+				// assuming ASP.NET control
+				var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
+				if (refMan == null) {
+					throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
+				}
+				string typeName = refMan.GetTypeName (element.Name.Prefix, element.Name.Name);
+				controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
+			} else {
+				// if no perfix was found. we have a HtmlControl
+				controlType = GetHtmlControlType (element);
 			}
-			string typeName = refMan.GetTypeName (element.Name.Prefix, element.Name.Name);
-			System.Type controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
+			if (controlType == null)
+				return null;
+				//throw new Exception ("Could not determine the control type for element " + element.FriendlyPathRepresentation);
+
 			IComponent component = Activator.CreateInstance (controlType) as IComponent;
 
 			// Since we have no Designers the TypeDescriptorsFilteringService won't work :(
@@ -303,6 +315,87 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 
 			return component;
+		}
+
+		bool IsRunAtServer (XElement el)
+		{
+			XName runat = new XName ("runat");
+			foreach (XAttribute a  in el.Attributes) {
+				if ((a.Name.ToLower () == runat) && (a.Value.ToLower () == "server"))
+					return true;
+			}
+			return false;
+		}
+
+		//static string[] htmlControlTags = {"a", "button", "input", "img", "select", "textarea"};
+		static Dictionary<string, Type> htmlControlTags = new Dictionary<string, Type> () {
+			{"a", typeof (HtmlAnchor)},
+			{"button", typeof (HtmlButton)},
+			{"input", null}, // we'll check that one in the ProcessHtmlControl, because for this tag we have a lot of possible types depending on the type attribute
+			{"img", typeof (HtmlImage)},
+			{"select", typeof (HtmlSelect)},
+			{"textarea", typeof (HtmlTextArea)}
+		};
+
+		private Type GetHtmlControlType (XElement el)
+		{
+			string nameLowered = el.Name.Name.ToLower ();
+			if (!htmlControlTags.ContainsKey (nameLowered))
+				return null;
+
+			Type compType = htmlControlTags[nameLowered];
+			// we have an input tag
+			if (compType == null) {
+				string typeAttr = GetAttributeValueCI (el.Attributes, "type");
+				switch (typeAttr.ToLower ()) {
+				case "button":
+					compType = typeof (HtmlInputButton);
+					break;
+				case "checkbox":
+					compType = typeof (HtmlInputCheckBox);
+					break;
+				case "file":
+					compType = typeof (HtmlInputFile);
+					break;
+				case "hidden":
+					compType = typeof (HtmlInputHidden);
+					break;
+				case "image":
+					compType = typeof (HtmlInputImage);
+					break;
+				case "password":
+					compType = typeof (HtmlInputPassword);
+					break;
+				case "radio":
+					compType = typeof (HtmlInputRadioButton);
+					break;
+				case "reset":
+					compType = typeof (HtmlInputReset);
+					break;
+				case "submit":
+					compType = typeof (HtmlInputSubmit);
+					break;
+				case "text":
+					compType = typeof (HtmlInputText);
+					break;
+				}
+			}
+
+			return compType;
+		}
+
+		/// <summary>
+		/// Gets the attribute value. case insensitive
+		/// </summary>
+		string GetAttributeValueCI (XAttributeCollection attributes, string key)
+		{
+			XName nameKey = new XName (key.ToLowerInvariant ());
+
+			foreach (XAttribute attr in attributes) {
+				if (attr.Name.ToLower () == nameKey)
+					return attr.Value;
+			}
+			return string.Empty;
 		}
 
 		#endregion
