@@ -89,16 +89,16 @@ namespace AspNetEdit.Editor
 		
 		public void Initialise ()
 		{
-		  		Initialise (null, null);
+		  		Initialise (null);
 		}
 		
-		public void Initialise (SourceEditorView srcEditor, AspNetParsedDocument doc)
+		public void Initialise (ExtensibleTextEditor txtEditor)
 		{
 			DispatchService.AssertGuiThread ();
 			
 			System.Diagnostics.Trace.WriteLine ("Loading document into DesignerHost");
-			if (doc != null)
-				designerHost.Load (srcEditor, doc);
+			if (txtEditor != null)
+				designerHost.Load (txtEditor);
 			else
 				designerHost.NewFile ();
 			System.Diagnostics.Trace.WriteLine ("Loaded document into DesignerHost");

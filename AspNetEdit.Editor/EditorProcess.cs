@@ -67,11 +67,11 @@ namespace AspNetEdit.Editor
 			#endif
 		}
 		
-		public void Initialise (MonoDevelopProxy proxy, SourceEditorView srcEditor, AspNetParsedDocument doc)
+		public void Initialise (MonoDevelopProxy proxy, ExtensibleTextEditor txtEditor, AspNetParsedDocument doc)
 		{
 			System.Diagnostics.Trace.WriteLine ("Creating AspNetEdit EditorHost");
-			host = new EditorHost (proxy, (AspNetAppProject)srcEditor.Project, doc);
-			host.Initialise (srcEditor , doc);
+			host = new EditorHost (proxy, (AspNetAppProject)txtEditor.Project, doc);
+			host.Initialise (txtEditor);
 			System.Diagnostics.Trace.WriteLine ("Created AspNetEdit EditorHost");
 			
 			StartGuiThread ();

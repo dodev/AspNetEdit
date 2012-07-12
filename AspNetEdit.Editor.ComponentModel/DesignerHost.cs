@@ -329,14 +329,14 @@ namespace AspNetEdit.Editor.ComponentModel
 //			}
 //		}
 		
-		public void Load (SourceEditorView srcEditor, AspNetParsedDocument doc)
+		public void Load (ExtensibleTextEditor txtEditor)
 		{
 			if (activated || RootComponent != null)
 				throw new InvalidOperationException ("You must reset the host before loading another file.");
 			loading = true;
 
 			this.Container.Add (new WebFormPage());
-			this.rootDocument = new Document ((Control)rootComponent, this, srcEditor, doc);
+			this.rootDocument = new Document ((Control)rootComponent, this, txtEditor);
 
 			loading = false;
 			OnLoadComplete ();

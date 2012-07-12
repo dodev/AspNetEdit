@@ -192,7 +192,7 @@ namespace AspNetEdit.Integration
 			}
 			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
 			
-			editorProcess.Initialise (proxy, srcEditor, doc);
+			editorProcess.Initialise (proxy, srcEditor.TextEditor, doc);
 			
 			activated = true;
 

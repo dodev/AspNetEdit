@@ -63,7 +63,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		private DesignerHost host;
 		
 		AspNetParsedDocument aspNetDoc;
-		SourceEditorView srcEditor;
+		ExtensibleTextEditor textEditor;
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
@@ -73,10 +73,10 @@ namespace AspNetEdit.Editor.ComponentModel
 		}
 		
 		///<summary>Creates a document from an existing file</summary>
-		public Document (Control parent, DesignerHost host, SourceEditorView srcEditorView, AspNetParsedDocument doc)
+		public Document (Control parent, DesignerHost host, ExtensibleTextEditor txtEditor)
 		{
-			this.srcEditor = srcEditorView;
-			this.aspNetDoc = doc;
+			textEditor = txtEditor;
+			parse (txtEditor.Text, txtEditor.FileName);
 			initDocument (parent, host);
 		}
 		
@@ -102,7 +102,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			var parser = new AspNetParser ();
 
 			using (StringReader strRd = new StringReader (doc)) {
-				aspNetDoc = parser.Parse (true, fileName, strRd, srcEditor.Project) as AspNetParsedDocument;
+				aspNetDoc = parser.Parse (true, fileName, strRd, textEditor.Project) as AspNetParsedDocument;
 			}
 		}
 
@@ -253,10 +253,10 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		private string GetTextFromEditor (TextLocation start, TextLocation end)
 		{
-			if (srcEditor == null)
+			if (textEditor == null)
 				throw new NullReferenceException ("The SourceEditorView is not set. Can't process document for text nodes.");
 
-			return srcEditor.TextEditor.GetTextBetween (start.Line, start.Column, end.Line, end.Column);
+			return textEditor.GetTextBetween (start.Line, start.Column, end.Line, end.Column);
 		}
 
 		private IComponent ProcessControl (XElement element)
