@@ -256,6 +256,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		private IComponent ProcessControl (XElement element)
 		{
+			// get the control's Type
 			var refMan = host.GetService (typeof(WebFormReferenceManager)) as WebFormReferenceManager;
 			if (refMan == null) {
 				throw new ArgumentNullException ("The WebFormReferenceManager service is not set");
@@ -264,11 +265,16 @@ namespace AspNetEdit.Editor.ComponentModel
 			System.Type controlType = typeof(System.Web.UI.WebControls.WebControl).Assembly.GetType (typeName, true, true);
 			IComponent component = Activator.CreateInstance (controlType) as IComponent;
 
+			// Since we have no Designers the TypeDescriptorsFilteringService won't work :(
+			// looking for properties and events declared as attributes of the server control node
 			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (controlType);
 			PropertyDescriptor desc = null;
+			EventDescriptorCollection eCollection = TypeDescriptor.GetEvents (controlType);
+			EventDescriptor evDesc = null;
 
 			foreach (XAttribute attr in element.Attributes) {
 				desc = pCollection.Find (attr.Name.Name, true);
+
 				if (desc != null) {
 					if (desc.PropertyType == typeof (string))
 						desc.SetValue (component, attr.Value);
@@ -286,10 +292,13 @@ namespace AspNetEdit.Editor.ComponentModel
 						desc.SetValue (component, val);
 					} else if (desc.PropertyType == typeof (System.Drawing.Color))
 						desc.SetValue (component, System.Drawing.Color.FromName (attr.Value));
-					else if (desc.PropertyType == typeof (System.EventHandler)) {
-						// TODO: get EventHandler from string !?
-					}
+				} else if (attr.Name.Name.Contains ("On")) {
+					// TODO: filter events for the component  !?
+					string eventName = attr.Name.Name.Replace ("On", string.Empty);
+					evDesc = eCollection.Find (eventName, true);
+					if (evDesc != null) {
 
+					}
 				}
 			}
 
