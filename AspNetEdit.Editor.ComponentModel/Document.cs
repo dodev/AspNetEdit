@@ -57,6 +57,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		public static readonly string newDocument = "<html>\n<head>\n\t<title>{0}</title>\n</head>\n<body>\n<form runat=\"server\">\n\n</form></body>\n</html>";
 
 		Hashtable directives;
+		int directivePlaceHolderKey = 0;
 
 		private Control parent;
 		private DesignerHost host;
@@ -67,16 +68,16 @@ namespace AspNetEdit.Editor.ComponentModel
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
 		{
-			initDocument (parent, host);
 			parse (String.Format (newDocument, documentName), documentName);
+			initDocument (parent, host);
 		}
 		
 		///<summary>Creates a document from an existing file</summary>
 		public Document (Control parent, DesignerHost host, SourceEditorView srcEditorView, AspNetParsedDocument doc)
 		{
-			initDocument (parent, host);
 			this.srcEditor = srcEditorView;
 			this.aspNetDoc = doc;
+			initDocument (parent, host);
 		}
 		
 		private void initDocument (Control parent, DesignerHost host)
@@ -91,6 +92,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
 			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
+			ParseDirectives ();
 		}
 
 		#region StateEngine parser
@@ -103,6 +105,27 @@ namespace AspNetEdit.Editor.ComponentModel
 				aspNetDoc = parser.Parse (true, fileName, strRd, srcEditor.Project) as AspNetParsedDocument;
 			}
 		}
+
+		void ParseDirectives ()
+		{
+			CheckForDirective (aspNetDoc.XDocument);
+		}
+
+		void CheckForDirective (XNode node)
+		{
+			if (node is XContainer) {
+				var container = node as XContainer;
+				foreach (XNode nd in container.Nodes)
+					CheckForDirective (nd);
+
+			} else if (node is AspNetDirective) {
+				var directive = node as AspNetDirective;
+				var properties = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
+				foreach (XAttribute attr in directive.Attributes)
+					properties.Add (attr.Name.Name, attr.Value);
+				AddDirective (directive.Name.Name, properties);
+			}
+		}
 		
 		#endregion
 		
@@ -110,12 +133,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public string ToDesignTimeHtml ()
 		{
-			string doc = null;
-			if (aspNetDoc.XDocument != null) {
-				doc = serializeNode (aspNetDoc.XDocument.RootElement);
-			}
-
-			return doc;
+			// serialize everything insed the <html> tag
+			return serializeNode (aspNetDoc.XDocument.RootElement);
 		}
 		#endregion
 		
@@ -126,26 +145,12 @@ namespace AspNetEdit.Editor.ComponentModel
 		string serializeNode (MonoDevelop.Xml.StateEngine.XNode node)
 		{
 			prevTagLocation = node.Region.End;
-			
-			MonoDevelop.Xml.StateEngine.XElement element = node as MonoDevelop.Xml.StateEngine.XElement;
+
+			var element = node as XElement;
+
 			if (element == null) {
-//				switch (node.GetType ().ToString ()) {
-//				case typeof (AspNetDirective).ToString ():
-//					break;
-//				case typeof (AspNetHtmlEncodedExpression).ToString ():
-//					break;
-//				case typeof (AspNetRenderBlock).ToString ():
-//					break;
-//				case typeof (AspNetRenderExpression).ToString ():
-//					break;
-//				case typeof (AspNetServerComment).ToString ():
-//					break;
-//				case typeof (AspNetResourceExpression).ToString ():
-//					break;
-//				case typeof (AspNetDataBindingExpression).ToString ():
-//					break;
-//				}
-				return string.Empty; // TODO: serialize AspNetDom nodes with the right end location
+
+				return string.Empty;
 			}
 			
 			// checking for a ASP.NET server control OR HtmlControl
@@ -484,19 +489,19 @@ namespace AspNetEdit.Editor.ComponentModel
 		/// <returns>A placeholder identifier that can be used in the document</returns>
 		public string AddDirective (string name, IDictionary values)
 		{
-//			if ((0 == String.Compare (name, "Page", true, CultureInfo.InvariantCulture) && directives["Page"] != null)
-//				|| (0 == String.Compare (name, "Control", true, CultureInfo.InvariantCulture) && directives["Control"] != null))
-//				throw new Exception ("Only one Page or Control directive is allowed in a document");
-//
-//			DocumentDirective directive = new DocumentDirective (name, values, directivePlaceholderKey);
-//			directivePlaceholderKey++;
-//
-//			if (directives[name] == null)
-//				directives[name] = new ArrayList ();
-//
-//			((ArrayList)directives[name]).Add(directive);
-//
-//			return String.Format(DirectivePlaceholderStructure, directive.Key.ToString ());
+			if ((0 == String.Compare (name, "Page", true, CultureInfo.InvariantCulture) && directives["Page"] != null)
+				|| (0 == String.Compare (name, "Control", true, CultureInfo.InvariantCulture) && directives["Control"] != null))
+				throw new Exception ("Only one Page or Control directive is allowed in a document");
+
+			DocumentDirective directive = new DocumentDirective (name, values, directivePlaceHolderKey);
+			directivePlaceHolderKey++;
+
+			if (directives[name] == null)
+				directives[name] = new ArrayList ();
+
+			((ArrayList)directives[name]).Add(directive);
+
+			// TODO: placeholder for directives
 			return string.Empty;
 		}
 
