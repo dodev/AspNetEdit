@@ -65,6 +65,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		AspNetParser parser;
 		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
+		bool txtDocDirty = false; // notes when the content of the textEditor doesn't match the content of the XDocument
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
@@ -106,6 +107,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			using (StringReader strRd = new StringReader (doc)) {
 				aspNetDoc = parser.Parse (true, fileName, strRd, textEditor.Project) as AspNetParsedDocument;
 			}
+			txtDocDirty = false;
 		}
 
 		void ParseDirectives ()
@@ -129,14 +131,12 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
-		bool txtDocDirty = false;
-
 		void ParseControls ()
 		{
-			CheckForControl (aspNetDoc.XDocument.RootElement);
-
-			if (txtDocDirty)
+			do {
 				Parse (textEditor.Text, textEditor.FileName);
+				CheckForControl (aspNetDoc.XDocument.RootElement);
+			} while (txtDocDirty);
 		}
 
 		void CheckForControl (XNode node)
@@ -149,46 +149,64 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (element.Name.HasPrefix || IsRunAtServer (element)) {
 				string id = GetAttributeValueCI (element.Attributes, "id");
 
-				IComponent comp = null;
 				try {
-					comp = ProcessControl (element);
-					if (comp != null) {
-						this.host.Container.Add (comp, id);
-
-						// add id to the component, for later recognition
-						if (id == string.Empty)
-							InsertAttribute (element, "id", comp.Site.Name);
-
-						// add runat="server", if the element isn't marked
-						if (!IsRunAtServer(element))
-							InsertAttribute (element, "runat", "server");
+					// check the DesignContainer if a component for that node already exists
+					if (string.IsNullOrEmpty(id) || (host.GetComponent(id) == null)) {
+						IComponent comp = ProcessControl (element);
+						if (comp != null) {
+							this.host.Container.Add (comp, id);
+	
+							// add id to the component, for later recognition
+							if (id == string.Empty) {
+								InsertAttribute (element, "id", comp.Site.Name);
+								return;
+							}
+						}
+					}
+					// add runat="server", if the element isn't marked
+					if (!IsRunAtServer(element)) {
+						InsertAttribute (element, "runat", "server");
+						return;
 					}
 				} catch (Exception ex) {
 					System.Diagnostics.Trace.WriteLine (ex.ToString ());
 				}
 			}
 
-			foreach (XNode nd in element.Nodes)
+			foreach (XNode nd in element.Nodes) {
+				if (txtDocDirty)
+					return;
+
 				CheckForControl (nd);
+			}
+				
 		}
 
 		// adds an attribute to the end of the openning  tag
 		void InsertAttribute (XElement el, string key, string value)
 		{
-			TextLocation startPosition = TextLocation.Empty;
+			int line = el.Region.EndLine;
+			int column = 1;
+			string preambula = string.Empty;
 			string ending = string.Empty;
 
 			if (el.IsSelfClosing) {
-				startPosition = new TextLocation (el.Region.EndLine, el.Region.EndColumn - 2); // "/>"
+				column = el.Region.EndColumn - 2; // "/>"
 				ending = " ";
+			} else {
+				column = el.Region.EndColumn -1; // ">"
 			}
-			else
-				startPosition = new TextLocation (el.Region.EndLine, el.Region.EndColumn - 1); // ">"
 
-			textEditor.SetCaretTo (startPosition.Line, startPosition.Column);
-			textEditor.InsertAtCaret (string.Format (" {0}=\"{1}\"{2}", key, value, ending));
+			if (column > 1) {
+				string whatsBeforeUs = textEditor.GetTextBetween (line, column - 1, line, column);
+				if (!string.IsNullOrWhiteSpace (whatsBeforeUs))
+					preambula = " ";
+			}
 
-			txtDocDirty = true; // TODO: parse after each change
+			textEditor.SetCaretTo (line, column);
+			textEditor.InsertAtCaret (string.Format ("{0}{1}=\"{2}\"{3}", preambula, key, value, ending));
+
+			txtDocDirty = true;
 		}
 		
 		#endregion
@@ -219,7 +237,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			string id = GetAttributeValueCI (element.Attributes, "id");
 
-			// checking for a ASP.NET server control OR HtmlControl
+			// Controls are runat="server" and have unique id in the Container
 			if (IsRunAtServer (element) && !string.IsNullOrEmpty (id)) {
 				// HTML controls, doesn't need special rendering
 				var control = host.GetComponent (id) as WebControl;
