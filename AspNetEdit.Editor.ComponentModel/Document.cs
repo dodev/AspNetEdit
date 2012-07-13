@@ -61,23 +61,27 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		private Control parent;
 		private DesignerHost host;
-		
+
+		AspNetParser parser;
 		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
 		{
-			parse (String.Format (newDocument, documentName), documentName);
 			initDocument (parent, host);
+			Parse (String.Format (newDocument, documentName), documentName);
+			// TODO: get a ExtensibleTextEditor instance, if we have an new empty file
 		}
 		
 		///<summary>Creates a document from an existing file</summary>
 		public Document (Control parent, DesignerHost host, ExtensibleTextEditor txtEditor)
 		{
 			textEditor = txtEditor;
-			parse (txtEditor.Text, txtEditor.FileName);
 			initDocument (parent, host);
+			Parse (txtEditor.Text, txtEditor.FileName);
+			ParseDirectives ();
+			ParseControls ();
 		}
 		
 		private void initDocument (Control parent, DesignerHost host)
@@ -92,15 +96,13 @@ namespace AspNetEdit.Editor.ComponentModel
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
 			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-			ParseDirectives ();
+			parser = new AspNetParser ();
 		}
 
 		#region StateEngine parser
 		
-		void parse (string doc, string fileName)
+		void Parse (string doc, string fileName)
 		{
-			var parser = new AspNetParser ();
-
 			using (StringReader strRd = new StringReader (doc)) {
 				aspNetDoc = parser.Parse (true, fileName, strRd, textEditor.Project) as AspNetParsedDocument;
 			}
@@ -125,6 +127,68 @@ namespace AspNetEdit.Editor.ComponentModel
 					properties.Add (attr.Name.Name, attr.Value);
 				AddDirective (directive.Name.Name, properties);
 			}
+		}
+
+		bool txtDocDirty = false;
+
+		void ParseControls ()
+		{
+			CheckForControl (aspNetDoc.XDocument.RootElement);
+
+			if (txtDocDirty)
+				Parse (textEditor.Text, textEditor.FileName);
+		}
+
+		void CheckForControl (XNode node)
+		{
+			if (!(node is XElement))
+				return;
+
+			var element = node as XElement;
+
+			if (element.Name.HasPrefix || IsRunAtServer (element)) {
+				string id = GetAttributeValueCI (element.Attributes, "id");
+
+				IComponent comp = null;
+				try {
+					comp = ProcessControl (element);
+					if (comp != null) {
+						this.host.Container.Add (comp, id);
+
+						// add id to the component, for later recognition
+						if (id == string.Empty)
+							InsertAttribute (element, "id", comp.Site.Name);
+
+						// add runat="server", if the element isn't marked
+						if (!IsRunAtServer(element))
+							InsertAttribute (element, "runat", "server");
+					}
+				} catch (Exception ex) {
+					System.Diagnostics.Trace.WriteLine (ex.ToString ());
+				}
+			}
+
+			foreach (XNode nd in element.Nodes)
+				CheckForControl (nd);
+		}
+
+		// adds an attribute to the end of the openning  tag
+		void InsertAttribute (XElement el, string key, string value)
+		{
+			TextLocation startPosition = TextLocation.Empty;
+			string ending = string.Empty;
+
+			if (el.IsSelfClosing) {
+				startPosition = new TextLocation (el.Region.EndLine, el.Region.EndColumn - 2); // "/>"
+				ending = " ";
+			}
+			else
+				startPosition = new TextLocation (el.Region.EndLine, el.Region.EndColumn - 1); // ">"
+
+			textEditor.SetCaretTo (startPosition.Line, startPosition.Column);
+			textEditor.InsertAtCaret (string.Format (" {0}=\"{1}\"{2}", key, value, ending));
+
+			txtDocDirty = true; // TODO: parse after each change
 		}
 		
 		#endregion
@@ -152,30 +216,13 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				return string.Empty;
 			}
-			
+
+			string id = GetAttributeValueCI (element.Attributes, "id");
+
 			// checking for a ASP.NET server control OR HtmlControl
-			if (element.Name.HasPrefix || IsRunAtServer (element)) {
-				// create and add a Component to the Container
-				string id = string.Empty;
-				XName idName = new XName ("id");
-
-				foreach (XAttribute attr in element.Attributes) {
-					if (attr.Name.ToLower () == idName) {
-						id = attr.Value;
-						break;
-					}
-				}
-
-				IComponent comp = null;
-				try {
-					comp = ProcessControl (element);
-					if (comp != null)
-						this.host.Container.Add (comp, id);
-				} catch (Exception ex) {
-					System.Diagnostics.Trace.WriteLine (ex.ToString ());
-				}
-
-				var control = comp as WebControl;
+			if (IsRunAtServer (element) && !string.IsNullOrEmpty (id)) {
+				// HTML controls, doesn't need special rendering
+				var control = host.GetComponent (id) as WebControl;
 
 				// genarete placeholder
 				if (control != null) {
