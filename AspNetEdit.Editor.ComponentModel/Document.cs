@@ -66,6 +66,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
 		bool txtDocDirty = false; // notes when the content of the textEditor doesn't match the content of the XDocument
+		Hashtable controlTags; // string => XElement representation of all the components
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
@@ -98,6 +99,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
 			parser = new AspNetParser ();
+			controlTags = new Hashtable (StringComparer.CurrentCultureIgnoreCase);
 		}
 
 		#region StateEngine parser
@@ -159,8 +161,10 @@ namespace AspNetEdit.Editor.ComponentModel
 							// add id to the component, for later recognition
 							if (id == string.Empty) {
 								InsertAttribute (element, "id", comp.Site.Name);
+								controlTags.Add (comp.Site.Name, comp);
 								return;
 							}
+							controlTags.Add (id, comp);
 						}
 					}
 					// add runat="server", if the element isn't marked
@@ -208,6 +212,80 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			txtDocDirty = true;
 		}
+
+		public void UpdateTag (string id, Control updatedControl)
+		{
+			try {
+				Dictionary <string, string> properties = new Dictionary<string, string> (StringComparer.InvariantCultureIgnoreCase);
+	
+				// we need the type to get the properties
+				System.Type controlType = updatedControl.GetType ();
+	
+				// filter the properties to get the changed ones
+				var collection = TypeDescriptor.GetProperties (controlType, new Attribute[] {BrowsableAttribute.Yes}) as PropertyDescriptorCollection;
+	
+				foreach (PropertyDescriptor desc in collection) {
+					var defVal = desc.Attributes[typeof (DefaultValueAttribute)] as DefaultValueAttribute;
+
+					if ((defVal != null) && !desc.GetValue(updatedControl).Equals(defVal.Value)) {
+						
+						// workaround for a bug in System.Web.UI.Control
+						// the DefaultValueAttribute is set to a string - "0", while it should be of enum ViewStateMode
+						// and so that the ViewStateMode property appears to always have a value different from the default
+						if (desc.Name == "ViewStateMode") {
+							var val = (ViewStateMode)desc.GetValue (updatedControl);
+							if (val == ViewStateMode.Inherit) // ViewStateMode.Inherit is the default
+								continue;
+						}
+
+						var converter = TypeDescriptor.GetConverter (desc.PropertyType) as TypeConverter;
+						if (converter != null) {
+							properties.Add (desc.Name, converter.ConvertToString (desc.GetValue (updatedControl)));
+						} else
+							properties.Add (desc.Name, desc.GetValue (updatedControl).ToString ());
+					}
+				}
+	
+				// get the tag node
+				XElement el = controlTags[id] as XElement;
+	
+				// if the id was changed. i.e. is in the filtered properties
+				if (properties.ContainsKey("id")) {
+					if (host.GetComponent (properties["id"]) != null)
+						throw new Exception ("Element with that name already excists: "); // TODO: display warning instead of exception
+	
+					// update the key of the component in the IContainer
+					host.Container.Remove (updatedControl);
+					host.Container.Add (updatedControl, properties["id"]);
+	
+					// change the key of the tag in the controlTags dict
+					controlTags.Remove (properties["id"]);
+					controlTags.Add (properties["id"], el);
+				}
+	
+				// add to the properies array all the attributes that weren't changed
+				foreach (XAttribute attr in el.Attributes) {
+					if (!properties.ContainsKey (attr.Name.Name)) 
+						properties[attr.Name.Name] = attr.Value;
+				}
+	
+				// build the new node
+				string attributes = string.Empty;
+	
+				foreach (KeyValuePair<string, string> kv in properties)
+					attributes += string.Format (" {0}=\"{1}\"", kv.Key, kv.Value);
+	
+				string newTag = string.Format ("<{0}{1}{2}>", el.Name.FullName, attributes, el.IsSelfClosing ? " /" : "");
+	
+				// and replace the node in the TextEditor
+				textEditor.Remove (el.Region);
+				textEditor.SetCaretTo (el.Region.BeginLine, el.Region.BeginColumn);
+				textEditor.InsertAtCaret (newTag);
+
+			} catch (Exception ex) {
+				System.Diagnostics.Trace.WriteLine (ex.ToString ());
+			}
+		}
 		
 		#endregion
 		
@@ -239,8 +317,14 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			// Controls are runat="server" and have unique id in the Container
 			if (IsRunAtServer (element) && !string.IsNullOrEmpty (id)) {
+				IComponent component = host.GetComponent (id);
+
+				// update the control tag for the component
+				if (component is Control)
+					controlTags[component.Site.Name] = element;
+
 				// HTML controls, doesn't need special rendering
-				var control = host.GetComponent (id) as WebControl;
+				var control = component as WebControl;
 
 				// genarete placeholder
 				if (control != null) {
@@ -349,39 +433,29 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			// Since we have no Designers the TypeDescriptorsFilteringService won't work :(
 			// looking for properties and events declared as attributes of the server control node
-			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (controlType);
+			Attribute[] filter = new Attribute[] { BrowsableAttribute.Yes};
+			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (controlType, filter);
 			PropertyDescriptor desc = null;
-			EventDescriptorCollection eCollection = TypeDescriptor.GetEvents (controlType);
-			EventDescriptor evDesc = null;
+//			EventDescriptorCollection eCollection = TypeDescriptor.GetEvents (controlType, filter);
+//			EventDescriptor evDesc = null;
 
 			foreach (XAttribute attr in element.Attributes) {
 				desc = pCollection.Find (attr.Name.Name, true);
-
 				if (desc != null) {
-					if (desc.PropertyType == typeof (string))
-						desc.SetValue (component, attr.Value);
-					else if (desc.PropertyType == typeof (uint)) {
-						uint val = 0;
-						uint.TryParse (attr.Value, out val);
-						desc.SetValue (component, val);
-					} else if (desc.PropertyType == typeof (int)) {
-						int val = 0;
-						int.TryParse (attr.Value, out val);
-						desc.SetValue (component, val);
-					} else if (desc.PropertyType == typeof (bool)) {
-						bool val = false;
-						bool.TryParse (attr.Value,out val);
-						desc.SetValue (component, val);
-					} else if (desc.PropertyType == typeof (System.Drawing.Color))
-						desc.SetValue (component, System.Drawing.Color.FromName (attr.Value));
-				} else if (attr.Name.Name.Contains ("On")) {
-					// TODO: filter events for the component  !?
-					string eventName = attr.Name.Name.Replace ("On", string.Empty);
-					evDesc = eCollection.Find (eventName, true);
-					if (evDesc != null) {
-
+					var converter = TypeDescriptor.GetConverter (desc.PropertyType) as TypeConverter;
+					if (converter != null) {
+						desc.SetValue (component, converter.ConvertFromString (attr.Value));
+					} else {
+						throw new NotSupportedException ("No TypeConverter found for property of type " + desc.PropertyType.Name);
 					}
-				}
+				} //else if (attr.Name.Name.Contains ("On")) {
+					// TODO: filter events for the component  !?
+//					string eventName = attr.Name.Name.Replace ("On", string.Empty);
+//					evDesc = eCollection.Find (eventName, true);
+//					if (evDesc != null) {
+//
+//					}
+//				}
 			}
 
 			return component;

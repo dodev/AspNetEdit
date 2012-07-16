@@ -433,11 +433,18 @@ namespace AspNetEdit.Integration
 		#endregion DocumentOutline stuff
 
 		#region IPropertyPadProvider implementation
+		/// <summary>
+		/// The edited component identifier. Stores the id of the component in case it is changed in the property pad.
+		/// </summary>
+		string editedComponentId = string.Empty;
+
 		public object GetActiveComponent ()
 		{
 			var selServ = editorProcess.Editor.Services.GetService (typeof (ISelectionService)) as ISelectionService;
 			if (selServ == null)
 				return null;
+
+			editedComponentId = (selServ.PrimarySelection as IComponent).Site.Name;
 
 			return selServ.PrimarySelection;
 		}
@@ -449,12 +456,11 @@ namespace AspNetEdit.Integration
 
 		public void OnEndEditing (object obj)
 		{
-
 		}
 
 		public void OnChanged (object obj)
 		{
-			// TODO: handle changed object
+			editorProcess.Editor.DesignerHost.UpdateNode (editedComponentId, obj as IComponent);
 		}
 		#endregion
 		

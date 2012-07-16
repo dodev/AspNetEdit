@@ -191,6 +191,11 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		#endregion
 
+		public void UpdateNode (string id, IComponent updatedState)
+		{
+			rootDocument.UpdateTag (id, updatedState as Control);
+		}
+
 		#region Transaction stuff
 
 		private Stack transactionStack = new Stack ();
