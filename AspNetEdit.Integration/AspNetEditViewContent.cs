@@ -88,8 +88,6 @@ namespace AspNetEdit.Integration
 //			propertyFrame.BorderWidth = 0;
 			
 			viewContent.WorkbenchWindow.Closing += workbenchWindowClosingHandler;
-			viewContent.DirtyChanged += vcDirtyChanged;
-			viewContent.BeforeSave += vcBeforeSave;
 			
 			outlineStore = null;
 			outlineStore = null;
@@ -101,18 +99,6 @@ namespace AspNetEdit.Integration
 		{
 			if (activated)
 				suppressSerialisation = true;
-		}
-		
-		void vcDirtyChanged (object sender, System.EventArgs e)
-		{
-			if (activated && !viewContent.IsDirty)
-				viewContent.IsDirty = true;
-		}
-				
-		void vcBeforeSave (object sender, System.EventArgs e)
-		{
-			if (activated)
-				saveDocumentToTextView ();
 		}
 		
 		public override Gtk.Widget Control {
@@ -133,8 +119,6 @@ namespace AspNetEdit.Integration
 			disposed = true;
 			
 			base.WorkbenchWindow.Closing -= workbenchWindowClosingHandler;
-			viewContent.DirtyChanged -= vcDirtyChanged;
-			viewContent.BeforeSave -= vcBeforeSave;
 			
 			DestroyEditorAndSockets ();
 			designerFrame.Destroy ();
@@ -198,9 +182,6 @@ namespace AspNetEdit.Integration
 
 			// TODO: update the tree on changes in the Dom
 			BuildTreeStore (doc.XDocument);
-			
-			//FIXME: track 'dirtiness' properly
-			viewContent.IsDirty = true;
 		}
 		
 		public override void Deselected ()
