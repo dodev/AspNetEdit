@@ -65,8 +65,8 @@ namespace AspNetEdit.Editor.ComponentModel
 		AspNetParser parser;
 		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
-		bool txtDocDirty = false; // notes when the content of the textEditor doesn't match the content of the XDocument
-		Hashtable controlTags; // string => XElement representation of all the components
+		bool txtDocDirty; // notes when the content of the textEditor doesn't match the content of the XDocument
+		string designableHtml = string.Empty;
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
@@ -81,9 +81,6 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			textEditor = txtEditor;
 			initDocument (parent, host);
-			Parse (txtEditor.Text, txtEditor.FileName);
-			ParseDirectives ();
-			ParseControls ();
 		}
 		
 		private void initDocument (Control parent, DesignerHost host)
@@ -97,47 +94,80 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (!host.Loading)
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
-			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
 			parser = new AspNetParser ();
-			controlTags = new Hashtable (StringComparer.CurrentCultureIgnoreCase);
+			directives = null;
+			aspNetDoc = null;
+			txtDocDirty = true;
 		}
+
+		public void PersistDocument ()
+		{
+			OnChanging ();
+
+			// parse the contents of the textEditor
+			Parse ();
+
+			// initializing the dicts of directives and controls tags
+			if (directives == null) {
+				directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
+				CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
+				ParseControls ();
+			}
+
+			// serialize the tree to designable HTML
+			designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
+
+			OnChanged ();
+		}
+
 
 		#region StateEngine parser
-		
-		void Parse (string doc, string fileName)
+
+		/// <summary>
+		/// Parse the TextEditor.Text document and tracks the txtDocDirty flag.
+		/// </summary>
+		AspNetParsedDocument Parse ()
 		{
-			using (StringReader strRd = new StringReader (doc)) {
-				aspNetDoc = parser.Parse (true, fileName, strRd, textEditor.Project) as AspNetParsedDocument;
+			if (txtDocDirty) {
+				aspNetDoc = Parse (textEditor.Text, textEditor.FileName);
+				txtDocDirty = false;
 			}
-			txtDocDirty = false;
+			return aspNetDoc;
 		}
 
-		void ParseDirectives ()
+		AspNetParsedDocument Parse (string doc, string fileName)
 		{
-			CheckForDirective (aspNetDoc.XDocument);
+			AspNetParsedDocument parsedDoc = null;
+			using (StringReader strRd = new StringReader (doc)) {
+				parsedDoc = parser.Parse (true, fileName, strRd, textEditor.Project) as AspNetParsedDocument;
+			}
+			return parsedDoc;
 		}
 
-		void CheckForDirective (XNode node)
+		void CheckForDirective (IEnumerable<XNode> nodes)
 		{
-			if (node is XContainer) {
-				var container = node as XContainer;
-				foreach (XNode nd in container.Nodes)
-					CheckForDirective (nd);
-
-			} else if (node is AspNetDirective) {
-				var directive = node as AspNetDirective;
-				var properties = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-				foreach (XAttribute attr in directive.Attributes)
-					properties.Add (attr.Name.Name, attr.Value);
-				AddDirective (directive.Name.Name, properties);
+			foreach (XNode node in nodes) {
+				if (node is XContainer) {
+					var container = node as XContainer;
+					CheckForDirective (container.AllDescendentNodes);
+	
+				} else if (node is AspNetDirective) {
+					var directive = node as AspNetDirective;
+					var properties = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
+					foreach (XAttribute attr in directive.Attributes)
+						properties.Add (attr.Name.Name, attr.Value);
+					AddDirective (directive.Name.Name, properties);
+				}
 			}
 		}
 
 		void ParseControls ()
 		{
+			// the method check for control may change the document
+			// so we parse the document each time it does
 			do {
-				Parse (textEditor.Text, textEditor.FileName);
-				CheckForControl (aspNetDoc.XDocument.RootElement);
+				var doc = Parse ();
+				CheckForControl (doc.XDocument.RootElement);
 			} while (txtDocDirty);
 		}
 
@@ -161,10 +191,9 @@ namespace AspNetEdit.Editor.ComponentModel
 							// add id to the component, for later recognition
 							if (id == string.Empty) {
 								InsertAttribute (element, "id", comp.Site.Name);
-								controlTags.Add (comp.Site.Name, comp);
+
 								return;
 							}
-							controlTags.Add (id, comp);
 						}
 					}
 					// add runat="server", if the element isn't marked
@@ -225,6 +254,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				var collection = TypeDescriptor.GetProperties (controlType, new Attribute[] {BrowsableAttribute.Yes}) as PropertyDescriptorCollection;
 	
 				foreach (PropertyDescriptor desc in collection) {
+					try {
 					var defVal = desc.Attributes[typeof (DefaultValueAttribute)] as DefaultValueAttribute;
 
 					if ((defVal != null) && !desc.GetValue(updatedControl).Equals(defVal.Value)) {
@@ -244,10 +274,17 @@ namespace AspNetEdit.Editor.ComponentModel
 						} else
 							properties.Add (desc.Name, desc.GetValue (updatedControl).ToString ());
 					}
+					} catch (Exception ex) {
+						// something
+						System.Diagnostics.Trace.WriteLine (ex.ToString ());
+					}
 				}
 	
 				// get the tag node
-				XElement el = controlTags[id] as XElement;
+				AspNetParsedDocument doc = Parse ();
+				XElement el = GetControlTag (doc.XDocument.RootElement, id);
+				if (el == null)
+					throw new Exception ("Could not find element with id = " + id);
 	
 				// if the id was changed. i.e. is in the filtered properties
 				if (properties.ContainsKey("id")) {
@@ -257,10 +294,6 @@ namespace AspNetEdit.Editor.ComponentModel
 					// update the key of the component in the IContainer
 					host.Container.Remove (updatedControl);
 					host.Container.Add (updatedControl, properties["id"]);
-	
-					// change the key of the tag in the controlTags dict
-					controlTags.Remove (properties["id"]);
-					controlTags.Add (properties["id"], el);
 				}
 	
 				// add to the properies array all the attributes that weren't changed
@@ -282,11 +315,34 @@ namespace AspNetEdit.Editor.ComponentModel
 				textEditor.SetCaretTo (el.Region.BeginLine, el.Region.BeginColumn);
 				textEditor.InsertAtCaret (newTag);
 
+				// update the document's representation
+				PersistDocument ();
+
 			} catch (Exception ex) {
 				System.Diagnostics.Trace.WriteLine (ex.ToString ());
 			}
 		}
-		
+
+		XElement GetControlTag (XElement container, string id)
+		{
+			XElement controlTag = null;
+			foreach (XNode node in container.Nodes) {
+				if (controlTag != null) {
+					break;
+				}
+				if (node is XElement) {
+					XElement el = node as XElement;
+					string currId = GetAttributeValueCI (el.Attributes, "id");
+					if (IsRunAtServer (el) && (string.Compare(currId, id, true) == 0)) {
+						controlTag = el;
+						break;
+					}
+					controlTag = GetControlTag (el, id);
+				} 
+			}
+			return controlTag;
+		}
+
 		#endregion
 		
 		#region Designer communication
@@ -294,8 +350,24 @@ namespace AspNetEdit.Editor.ComponentModel
 		public string ToDesignTimeHtml ()
 		{
 			// serialize everything insed the <html> tag
-			return serializeNode (aspNetDoc.XDocument.RootElement);
+			return designableHtml;
 		}
+
+		public event EventHandler Changing;
+		public event EventHandler Changed;
+
+		public void OnChanged ()
+		{
+			if (Changed != null)
+				Changed (this, EventArgs.Empty);
+		}
+
+		public void OnChanging ()
+		{
+			if (Changing != null)
+				Changing (this, EventArgs.Empty);
+		}
+
 		#endregion
 		
 		#region Serialization
@@ -318,10 +390,6 @@ namespace AspNetEdit.Editor.ComponentModel
 			// Controls are runat="server" and have unique id in the Container
 			if (IsRunAtServer (element) && !string.IsNullOrEmpty (id)) {
 				IComponent component = host.GetComponent (id);
-
-				// update the control tag for the component
-				if (component is Control)
-					controlTags[component.Site.Name] = element;
 
 				// HTML controls, doesn't need special rendering
 				var control = component as WebControl;

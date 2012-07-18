@@ -85,6 +85,7 @@ namespace AspNetEdit.Editor
 			System.Diagnostics.Trace.WriteLine ("Creating DesignerHost");
 			designerHost = new DesignerHost (services);
 			System.Diagnostics.Trace.WriteLine ("Created DesignerHost");
+
 		}
 		
 		public void Initialise ()
@@ -95,7 +96,10 @@ namespace AspNetEdit.Editor
 		public void Initialise (ExtensibleTextEditor txtEditor)
 		{
 			DispatchService.AssertGuiThread ();
-			
+			designerHost.LoadComplete += delegate(object sender, EventArgs e) {
+				// subscribe to changes in the document
+				designerHost.RootDocument.Changed += new EventHandler (OnDocumentChanged);
+			};
 			System.Diagnostics.Trace.WriteLine ("Loading document into DesignerHost");
 			if (txtEditor != null)
 				designerHost.Load (txtEditor);
@@ -110,9 +114,8 @@ namespace AspNetEdit.Editor
 			designerView = (RootDesignerView)rootDesigner.GetView (ViewTechnology.Passthrough);
 			designerView.Realized += delegate {
 				System.Diagnostics.Trace.WriteLine ("Designer view realized");
+				designerHost.RootDocument.PersistDocument ();
 			};
-			
-			designerView.LoadDocumentInDesigner (designerHost.GetDesignableHtml ());
 		}
 		
 		public Gtk.Widget DesignerView {
@@ -201,6 +204,12 @@ namespace AspNetEdit.Editor
 			//doc = designerHost.GetEditableAspNetCode ();
 				
 			return doc;
+		}
+
+		public void OnDocumentChanged (object o, EventArgs ea)
+		{
+			if ((designerView != null) && designerView.IsRealized)
+				designerView.LoadDocumentInDesigner (designerHost.GetDesignableHtml ());
 		}
 		
 		#region IDisposable
