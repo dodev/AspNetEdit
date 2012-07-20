@@ -109,20 +109,22 @@ namespace AspNetEdit.Editor.ComponentModel
 		public void StartPersistingDocument ()
 		{
 			OnChanging ();
-
-			// parse the contents of the textEditor
-			Parse ();
-
-			// initializing the dicts of directives and controls tags
-			if (directives == null) {
-				directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-				CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
-				ParseControls ();
+			try {
+				// parse the contents of the textEditor
+				Parse ();
+	
+				// initializing the dicts of directives and controls tags
+				if (directives == null) {
+					directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
+					CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
+					ParseControls ();
+				}
+	
+				// serialize the tree to designable HTML
+				designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
+			} catch (Exception ex) {
+				System.Diagnostics.Trace.WriteLine (ex.ToString ());
 			}
-
-			// serialize the tree to designable HTML
-			designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
-
 			OnChanged ();
 		}
 
@@ -320,14 +322,13 @@ namespace AspNetEdit.Editor.ComponentModel
 				textEditor.Remove (el.Region);
 				textEditor.SetCaretTo (el.Region.BeginLine, el.Region.BeginColumn);
 				textEditor.InsertAtCaret (newTag);
-
-				// update the document's representation
-				txtDocDirty = true;
-				PersistDocument ();
-
 			} catch (Exception ex) {
 				System.Diagnostics.Trace.WriteLine (ex.ToString ());
 			}
+
+			// update the document's representation
+			txtDocDirty = true;
+			PersistDocument ();
 		}
 
 		XElement GetControlTag (XElement container, string id)
