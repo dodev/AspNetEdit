@@ -209,7 +209,9 @@ namespace AspNetEdit.Editor
 		public void OnDocumentChanged (object o, EventArgs ea)
 		{
 			if ((designerView != null) && designerView.IsRealized)
-				designerView.LoadDocumentInDesigner (designerHost.GetDesignableHtml ());
+				Gtk.Application.Invoke ( delegate {
+					designerView.LoadDocumentInDesigner (designerHost.GetDesignableHtml ());
+				});
 		}
 		
 		#region IDisposable

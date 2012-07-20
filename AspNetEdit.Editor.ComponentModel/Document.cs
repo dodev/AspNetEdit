@@ -102,6 +102,12 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void PersistDocument ()
 		{
+			System.Threading.Thread worker = new System.Threading.Thread (new System.Threading.ThreadStart(StartPersistingDocument));
+			worker.Start ();
+		}
+
+		public void StartPersistingDocument ()
+		{
 			OnChanging ();
 
 			// parse the contents of the textEditor
@@ -316,6 +322,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				textEditor.InsertAtCaret (newTag);
 
 				// update the document's representation
+				txtDocDirty = true;
 				PersistDocument ();
 
 			} catch (Exception ex) {
