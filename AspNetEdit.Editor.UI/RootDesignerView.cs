@@ -77,6 +77,11 @@ namespace AspNetEdit.Editor.UI
 			//it's through this that we communicate with JavaScript
 			//comm = new CommandManager (this);
 
+			TitleChanged += delegate(object o, TitleChangedArgs args) {
+
+				System.Diagnostics.Trace.WriteLine (args.Title);
+			};
+
 			//we use the host to get services and designers
 			this.host =  host as DesignerHost;
 			if (this.host == null)
@@ -511,7 +516,8 @@ namespace AspNetEdit.Editor.UI
 		public void LoadDocumentInDesigner (string htmlDocument)
 		{
 			// TODO: find out for what active was used
-			this.LoadHtmlString (htmlDocument, "/");
+			// TODO:  copy the designer context to assembly's dir and set the base url to it
+			this.LoadHtmlString (htmlDocument, "file:///home/dodo/gsoc2012/monodevelop/extras/AspNetEdit/designer_context/");
 		}
 		
 		

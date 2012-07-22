@@ -55,6 +55,10 @@ namespace AspNetEdit.Editor.ComponentModel
 	public class Document
 	{
 		public static readonly string newDocument = "<html>\n<head>\n\t<title>{0}</title>\n</head>\n<body>\n<form runat=\"server\">\n\n</form></body>\n</html>";
+		public static string designerContext = "\n<script type=\"text/javascript\" src=\"js/jquery-1.7.2.min.js\"></script>" +
+											   "\n<script type=\"text/javascript\" src=\"js/main.js\"></script>" +
+											   "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"css/control_style.css\" />" +
+												"\n";
 
 		Hashtable directives;
 		int directivePlaceHolderKey = 0;
@@ -414,19 +418,32 @@ namespace AspNetEdit.Editor.ComponentModel
 					return content;
 				}
 			}
-			
+
+			// strip script tags
+			if (element.Name.Name.ToLower () == "script")
+				return string.Empty;
+
 			// the node is a html element
 			string output = "<" + element.Name.FullName;
 			
-			// print the attributes... TODO: watchout for runat="server"
+			// print the attributes
 			foreach (MonoDevelop.Xml.StateEngine.XAttribute attr in element.Attributes) {
-				output += " " + attr.Name.FullName + "=\"" + attr.Value + "\"";
+				string name = attr.Name.Name.ToLower ();
+				// strip runat and on* event attributes
+				if ((name != "runat") && (name.Substring (0, 2).ToLower () != "on"))
+					output += " " + attr.Name.FullName + "=\"" + attr.Value + "\"";
 			}
 			
 			if (element.IsSelfClosing) {
 				output += " />";
 			} else {
 				output += ">";
+
+				// we are currentyl on the head tag
+				// add designer content - js and css
+				if (element.Name.Name.ToString () == "head") {
+					output += designerContext;
+				}
 				
 				// serializing the childnodes if any
 				foreach (MonoDevelop.Xml.StateEngine.XNode nd in element.Nodes) {

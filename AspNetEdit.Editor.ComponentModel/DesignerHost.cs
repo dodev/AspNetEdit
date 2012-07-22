@@ -53,6 +53,9 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
+			container.ComponentChanged += delegate(object sender, ComponentChangedEventArgs e) {
+				string smth = e.Member.Name;
+			};
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
