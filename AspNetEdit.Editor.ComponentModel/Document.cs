@@ -250,12 +250,19 @@ namespace AspNetEdit.Editor.ComponentModel
 			txtDocDirty = true;
 		}
 
+		void UpdateAttribute (XAttribute attr, string newValue)
+		{
+			textEditor.Remove (attr.Region);
+			textEditor.SetCaretTo (attr.Region.BeginLine, attr.Region.BeginColumn);
+			textEditor.InsertAtCaret (String.Format ("{0}=\"{1}\"", attr.Name.Name, newValue));
+			
+			txtDocDirty = true;
+		}
+
 		public void UpdateTag (string id, Control updatedControl)
 		{
 			try {
-				Dictionary <string, string> properties = new Dictionary<string, string> (StringComparer.InvariantCultureIgnoreCase);
-	
-				// we need the type to get the properties
+				Dictionary <string, string> properties = new Dictionary<string, string> (StringComparer.InvariantCultureIgnoreCase);			// we need the type to get the properties
 				System.Type controlType = updatedControl.GetType ();
 	
 				// filter the properties to get the changed ones
@@ -327,6 +334,46 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 
 			// update the document's representation
+			txtDocDirty = true;
+			PersistDocument ();
+		}
+
+		public void UpdateTag (IComponent component, MemberDescriptor memberDesc, object newVal)
+		{
+			string key = String.Empty;
+			string value = String.Empty;
+			AspNetParsedDocument doc = Parse ();
+			XElement el = GetControlTag (doc.XDocument.RootElement, component.Site.Name);
+
+			if (memberDesc is PropertyDescriptor) {
+				var propDesc = memberDesc as PropertyDescriptor;
+				key = memberDesc.Name;
+				value = propDesc.Converter.ConvertToString (newVal);
+			} else if (memberDesc is EventDescriptor) {
+				//var eventDesc = memberDesc as EventDescriptor;
+				//key = "On" + eventDesc.Name;
+				// TODO: get the handler method name
+				//value = newVal.ToString ();
+			} else {
+				// well, well, well! what do we have here!
+			}
+
+			bool found = false;
+
+			// check if the changed attribute was already in the tag 
+			foreach (XAttribute attr in el.Attributes) {
+				if (attr.Name.Name.ToLower () == key.ToLower ()) {
+					UpdateAttribute (attr, value);
+					found = true;
+					break;
+				}
+			}
+
+			// if it was not in the tag, add it
+			if (!found) {
+				InsertAttribute (el, key, value);
+			}
+
 			txtDocDirty = true;
 			PersistDocument ();
 		}

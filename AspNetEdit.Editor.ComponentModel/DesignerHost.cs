@@ -53,6 +53,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
+			container.ComponentChanged += new ComponentChangedEventHandler (OnComponentUpdated);
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
@@ -117,6 +118,11 @@ namespace AspNetEdit.Editor.ComponentModel
 		public IComponent GetComponent (string name)
 		{
 			return container.GetComponent (name);
+		}
+
+		public void OnComponentUpdated (object o, ComponentChangedEventArgs args)
+		{
+			this.RootDocument.UpdateTag (args.Component as IComponent, args.Member, args.NewValue);
 		}
 
 		public void DestroyComponent (IComponent component)
@@ -193,7 +199,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void UpdateNode (string id, IComponent updatedState)
 		{
-			rootDocument.UpdateTag (id, updatedState as Control);
+			//rootDocument.UpdateTag (id, updatedState as Control);
 		}
 
 		#region Transaction stuff
