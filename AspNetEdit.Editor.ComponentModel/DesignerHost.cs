@@ -122,7 +122,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void OnComponentUpdated (object o, ComponentChangedEventArgs args)
 		{
-			this.RootDocument.UpdateTag (args.Component as IComponent, args.Member, args.NewValue);
+			// FIXME: a bug in ComponentChangedEventArgs - switches the return value of NewValue and OldValue
+			this.RootDocument.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
 		}
 
 		public void DestroyComponent (IComponent component)
