@@ -50,6 +50,7 @@ FILES =  \
 	AspNetEdit.Editor.ComponentModel/WebFormPage.cs \
 	AspNetEdit.Editor.UI/PropertyGrid.cs \
 	AspNetEdit.Editor.UI/RootDesignerView.cs \
+	AspNetEdit.Editor/DesignerMessageManager.cs \
 	AspNetEdit.Editor/EditorHost.cs \
 	AspNetEdit.Editor/EditorProcess.cs \
 	AspNetEdit.Integration/AspNetEditDisplayBinding.cs \
@@ -85,6 +86,7 @@ REFERENCES =  \
 	System.Design \
 	System.Drawing \
 	System.Drawing.Design \
+	System.Runtime.Serialization \
 	System.Web \
 	System.Xml
 
