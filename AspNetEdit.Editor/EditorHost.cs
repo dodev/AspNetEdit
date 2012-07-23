@@ -55,6 +55,7 @@ namespace AspNetEdit.Editor
 		ServiceContainer services;
 		RootDesignerView designerView;
 		MonoDevelopProxy proxy;
+		DesignerMessageManager messageManager;
 		
 		public EditorHost (MonoDevelopProxy proxy, AspNetAppProject project, AspNetParsedDocument aspParsedDoc)
 		{
@@ -85,7 +86,7 @@ namespace AspNetEdit.Editor
 			System.Diagnostics.Trace.WriteLine ("Creating DesignerHost");
 			designerHost = new DesignerHost (services);
 			System.Diagnostics.Trace.WriteLine ("Created DesignerHost");
-
+			messageManager = new DesignerMessageManager (designerHost);
 		}
 		
 		public void Initialise ()
@@ -117,7 +118,11 @@ namespace AspNetEdit.Editor
 				designerHost.RootDocument.PersistDocument ();
 				// subscribe ot message sent from the designerView
 				designerView.TitleChanged += delegate(object o, WebKit.TitleChangedArgs args) {
-
+					try {
+						messageManager.HandleMessage (args.Title);
+					} catch (Exception ex) {
+						System.Diagnostics.Trace.WriteLine (ex.ToString ());
+					}
 				};
 			};
 		}
