@@ -166,6 +166,10 @@
       <Private>False</Private>
       <Package>monodevelop-core-addins</Package>
     </Reference>
+    <Reference Include="ICSharpCode.NRefactory.CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=efe927acf176eea2">
+      <Private>False</Private>
+      <Package>monodevelop</Package>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
@@ -202,6 +206,10 @@
     <None Include="ChangeLog" />
     <None Include="AspNetEdit.make" />
     <None Include="configure" />
+    <None Include="designer_context\css\control_style.css" />
+    <None Include="designer_context\js\handlers.js" />
+    <None Include="designer_context\js\jquery-1.7.2.min.js" />
+    <None Include="designer_context\js\main.js" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>
@@ -220,4 +228,7 @@
       </Properties>
     </MonoDevelop>
   </ProjectExtensions>
+  <ItemGroup>
+    <Folder Include="designer_context\" />
+  </ItemGroup>
 </Project>

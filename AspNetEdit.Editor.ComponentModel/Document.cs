@@ -57,6 +57,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		public static readonly string newDocument = "<html>\n<head>\n\t<title>{0}</title>\n</head>\n<body>\n<form runat=\"server\">\n\n</form></body>\n</html>";
 		public static string designerContext = "\n<script type=\"text/javascript\" src=\"js/jquery-1.7.2.min.js\"></script>" +
 											   "\n<script type=\"text/javascript\" src=\"js/main.js\"></script>" +
+											   "\n<script type=\"text/javascript\" src=\"js/handlers.js\"></script>" +
 											   "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"css/control_style.css\" />" +
 												"\n";
 
@@ -408,12 +409,14 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				// genarete placeholder
 				if (control != null) {
+					string content = "<div class=\"aspnetedit_control_container\">";
 					StringWriter strWriter = new StringWriter ();
 					HtmlTextWriter writer = new HtmlTextWriter (strWriter);
 					control.RenderControl (writer);
 					writer.Close ();
 					strWriter.Flush ();
-					string content = strWriter.ToString ();
+					content += strWriter.ToString ();
+					content += "</div>";
 					strWriter.Close ();
 					return content;
 				}
