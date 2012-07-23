@@ -115,6 +115,10 @@ namespace AspNetEdit.Editor
 			designerView.Realized += delegate {
 				System.Diagnostics.Trace.WriteLine ("Designer view realized");
 				designerHost.RootDocument.PersistDocument ();
+				// subscribe ot message sent from the designerView
+				designerView.TitleChanged += delegate(object o, WebKit.TitleChangedArgs args) {
+
+				};
 			};
 		}
 		

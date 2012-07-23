@@ -9,7 +9,14 @@ function SignalManager () {
 		jQuery ("title").html (str);
 	};
 	
-	this.ChangeSelection = function (idArr) {
+	this.ChangeSelection = function (idArr, primary) {
+		var args = JSON.stringify ({
+			"SelectedIds" : idArr,
+			"PrimarySelection": primary
+		});
+		var msg = new Message ("selection_changed", args);
+		
+		this.Send (JSON.stringify (msg));
 	};
 }
 
@@ -49,22 +56,30 @@ function SelectionManager () {
 			primarySelection = index;
 	};
 	
+	// FIXME: not changing the primarySelection when removing items
 	this.RemoveItem = function (id) {
 		var index = -1;
 		if ((index = selectedIds.indexOf(id)) != -1) {
 			selectedIds.splice (index, 1);
 			if (primarySelection == index) {
 				if (selectedIds.length > 0)
-					primarySelection = 0;
+					primarySelection = selectedIds.length - 1;
 				else
 					primarySelection = -1;
 			}
 		}
 	};
 	
-	this.CommitChanges = function () {};
+	this.CommitChanges = function () {
+		signalMan.ChangeSelection (selectedIds, primarySelection);	
+	};
 }
 
 function ExtractIdFromContainer (tag) {
 	return jQuery (tag).children ().first ().attr ("id");
+}
+
+function Message (name, args) {
+	this.MsgName = name;
+	this.Arguments = args;
 }
