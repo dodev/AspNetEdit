@@ -56,8 +56,12 @@ namespace AspNetEdit.Editor
 
 		public void HandleMessage (string json)
 		{
-			BasicMessage msg = DeserializeMessage<BasicMessage> (json);
+			// a message is an object, so always starts with a "{\"Message\":"
+			string msgHeader = "{\"MsgName\":";
+			if ((json.Length < msgHeader.Length) || (json.Substring (0, msgHeader.Length) != msgHeader))
+				return;
 
+			BasicMessage msg = DeserializeMessage<BasicMessage> (json);
 			switch (msg.MsgName) {
 			case "selection_changed":
 				ChangeSelection (msg.Arguments);
