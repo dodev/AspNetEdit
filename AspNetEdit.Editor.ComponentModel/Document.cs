@@ -55,11 +55,6 @@ namespace AspNetEdit.Editor.ComponentModel
 	public class Document
 	{
 		public static readonly string newDocument = "<html>\n<head>\n\t<title>{0}</title>\n</head>\n<body>\n<form runat=\"server\">\n\n</form></body>\n</html>";
-		public static string designerContext = "\n<script type=\"text/javascript\" src=\"js/jquery-1.7.2.min.js\"></script>" +
-											   "\n<script type=\"text/javascript\" src=\"js/main.js\"></script>" +
-											   "\n<script type=\"text/javascript\" src=\"js/handlers.js\"></script>" +
-											   "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"css/control_style.css\" />" +
-												"\n";
 
 		Hashtable directives;
 		int directivePlaceHolderKey = 0;
@@ -71,7 +66,8 @@ namespace AspNetEdit.Editor.ComponentModel
 		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
 		bool txtDocDirty; // notes when the content of the textEditor doesn't match the content of the XDocument
-		string designableHtml = string.Empty;
+		string designableHtml = String.Empty;
+		string designerContext = String.Empty;
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
@@ -103,6 +99,32 @@ namespace AspNetEdit.Editor.ComponentModel
 			directives = null;
 			aspNetDoc = null;
 			txtDocDirty = true;
+			InitDesignerContext ();
+		}
+
+		public void InitDesignerContext ()
+		{
+			string scriptTag = "\n<script type=\"text/javascript\" src=\"{0}\"></script>";
+			string cssLinkTag = "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"{0}\" />";
+
+			string scriptDir = "js";
+			string[] scripts = {
+				"jquery-1.7.2.min.js",
+				"main.js",
+				"handlers.js"
+			};
+			string styleDir = "css";
+			string[] styleSheets = {
+				"control_style.css"
+			};
+
+			designerContext = String.Empty;
+			foreach (string script in scripts)
+				designerContext += String.Format (scriptTag, Path.Combine (scriptDir, script));
+			foreach (string styleFile in styleSheets)
+				designerContext += String.Format (cssLinkTag, Path.Combine (styleDir, styleFile));
+
+			designerContext += "\n";
 		}
 
 		public void PersistDocument ()

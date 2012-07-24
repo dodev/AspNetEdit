@@ -34,6 +34,7 @@ using System.ComponentModel;
 using System.Text;
 using System.Web.UI;
 using System.Collections;
+using System.IO;
 
 using AspNetEdit.Editor.ComponentModel;
 //using AspNetEdit.JSCall;
@@ -56,6 +57,7 @@ namespace AspNetEdit.Editor.UI
 		private IMenuCommandService menuService;
 		protected bool active = false;
 		private string outDocument = null;
+		string baseUri;
 		
 		// dodev: To be tested with WebKit
 		//there's weird bug where a second Gecko instance *can't* be created
@@ -76,11 +78,8 @@ namespace AspNetEdit.Editor.UI
 		{
 			//it's through this that we communicate with JavaScript
 			//comm = new CommandManager (this);
-
-			TitleChanged += delegate(object o, TitleChangedArgs args) {
-
-				System.Diagnostics.Trace.WriteLine (args.Title);
-			};
+			string assemblyDir = System.IO.Path.GetDirectoryName (System.Reflection.Assembly.GetExecutingAssembly ().Location);
+			baseUri = "file://" + System.IO.Path.Combine (assemblyDir, "designer_context") + System.IO.Path.DirectorySeparatorChar.ToString ();
 
 			//we use the host to get services and designers
 			this.host =  host as DesignerHost;
@@ -515,9 +514,8 @@ namespace AspNetEdit.Editor.UI
 	
 		public void LoadDocumentInDesigner (string htmlDocument)
 		{
-			// TODO: find out for what active was used
-			// TODO:  copy the designer context to assembly's dir and set the base url to it
-			this.LoadHtmlString (htmlDocument, "file:///home/dodo/gsoc2012/monodevelop/extras/AspNetEdit/designer_context/");
+			// TODO: Copy the designer_context dir into the assembly directory, when building the addin
+			this.LoadString (htmlDocument, null, null, baseUri);
 		}
 		
 		
