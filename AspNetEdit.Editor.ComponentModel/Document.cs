@@ -450,7 +450,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		#region Serialization
 		
 		TextLocation prevTagLocation = new TextLocation (TextLocation.MinLine, TextLocation.MinColumn);
-		
+
 		string serializeNode (MonoDevelop.Xml.StateEngine.XNode node)
 		{
 			prevTagLocation = node.Region.End;
@@ -469,7 +469,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				IComponent component = host.GetComponent (id);
 
 				// HTML controls, doesn't need special rendering
-				var control = component as WebControl;
+				var control = component as Control;
 
 				// genarete placeholder
 				if (control != null) {
@@ -595,6 +595,11 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			if (component is ListControl)
 				ParseListItems (component as ListControl, element);
+
+			if ((component is HtmlContainerControl) && !element.IsSelfClosing) {
+				var containerControl = component as HtmlContainerControl;
+				containerControl.InnerHtml = GetTextFromEditor (element.Region.End, element.ClosingTag.Region.Begin);
+			}
 
 			// Since we have no Designers the TypeDescriptorsFilteringService won't work :(
 			// looking for properties and events declared as attributes of the server control node
