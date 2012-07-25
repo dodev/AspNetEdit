@@ -226,16 +226,11 @@ namespace AspNetEdit.Editor.ComponentModel
 							// add id to the component, for later recognition
 							if (id == string.Empty) {
 								InsertAttribute (element, "id", comp.Site.Name);
-
 								return;
 							}
 						}
 					}
-					// add runat="server", if the element isn't marked
-					if (!IsRunAtServer(element)) {
-						InsertAttribute (element, "runat", "server");
-						return;
-					}
+
 				} catch (Exception ex) {
 					System.Diagnostics.Trace.WriteLine (ex.ToString ());
 				}
@@ -470,7 +465,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			string id = GetAttributeValueCI (element.Attributes, "id");
 
 			// Controls are runat="server" and have unique id in the Container
-			if (IsRunAtServer (element) && !string.IsNullOrEmpty (id)) {
+			if (element.Name.HasPrefix || IsRunAtServer (element)) {
 				IComponent component = host.GetComponent (id);
 
 				// HTML controls, doesn't need special rendering
@@ -487,6 +482,8 @@ namespace AspNetEdit.Editor.ComponentModel
 					content += strWriter.ToString ();
 					content += "</div>";
 					strWriter.Close ();
+					if (!element.IsSelfClosing)
+						prevTagLocation = element.ClosingTag.Region.End;
 					return content;
 				}
 			}
@@ -590,11 +587,14 @@ namespace AspNetEdit.Editor.ComponentModel
 				// if no perfix was found. we have a HtmlControl
 				controlType = GetHtmlControlType (element);
 			}
-			if (controlType == null)
+			if ((controlType == null) || (controlType == typeof (ListItem)))
 				return null;
 				//throw new Exception ("Could not determine the control type for element " + element.FriendlyPathRepresentation);
 
 			IComponent component = Activator.CreateInstance (controlType) as IComponent;
+
+			if (component is ListControl)
+				ParseListItems (component as ListControl, element);
 
 			// Since we have no Designers the TypeDescriptorsFilteringService won't work :(
 			// looking for properties and events declared as attributes of the server control node
@@ -624,6 +624,60 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 
 			return component;
+		}
+
+		void ParseListItems (ListControl lControl, XElement tag)
+		{
+			string text, value, innerHtml, textPropery, valuePropery;
+			bool selected, enabled;
+			var boolConverter = TypeDescriptor.GetConverter (typeof (bool)) as BooleanConverter;
+			foreach (XElement el in tag.AllDescendentElements) {
+				if (el.Name.Name.ToLower () != "listitem")
+					continue;
+
+				text = value = innerHtml = String.Empty;
+				textPropery = valuePropery = String.Empty;
+				selected = false;
+				enabled = true;
+
+				foreach (XAttribute attr in el.Attributes) {
+					switch (attr.Name.Name.ToLower ()) {
+					case "text":
+						text = attr.Value;
+						break;
+					case "value":
+						value = attr.Value;
+						break;
+					case "selected":
+						selected = (bool)boolConverter.ConvertFromString (attr.Value);
+						break;
+					case "enabled":
+						enabled = (bool)boolConverter.ConvertFromString (attr.Value);
+						break;
+					}
+				}
+
+				if (!el.IsSelfClosing)
+					innerHtml = GetTextFromEditor (el.Region.End, el.ClosingTag.Region.Begin);
+
+				if (!String.IsNullOrEmpty (innerHtml))
+					textPropery = innerHtml;
+				else if (!String.IsNullOrEmpty (text))
+					textPropery = text;
+				else if (!String.IsNullOrEmpty (value))
+					textPropery = value;
+
+				if (!String.IsNullOrEmpty (value))
+					valuePropery = value;
+				else if (!String.IsNullOrEmpty (innerHtml))
+					valuePropery = innerHtml;
+				else if (!String.IsNullOrEmpty (text))
+					valuePropery = text;
+
+				ListItem li = new ListItem (textPropery, valuePropery, enabled);
+				li.Selected = selected;
+				lControl.Items.Add (li);
+			}
 		}
 
 		bool IsRunAtServer (XElement el)
