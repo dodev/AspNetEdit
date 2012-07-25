@@ -265,19 +265,21 @@ namespace AspNetEdit.Editor.ComponentModel
 				if (!string.IsNullOrWhiteSpace (whatsBeforeUs))
 					preambula = " ";
 			}
-
-			textEditor.SetCaretTo (line, column);
-			textEditor.InsertAtCaret (string.Format ("{0}{1}=\"{2}\"{3}", preambula, key, value, ending));
+			Gtk.Application.Invoke (delegate {
+				textEditor.SetCaretTo (line, column);
+				textEditor.InsertAtCaret (string.Format ("{0}{1}=\"{2}\"{3}", preambula, key, value, ending));
+			});
 
 			txtDocDirty = true;
 		}
 
 		void UpdateAttribute (XAttribute attr, string newValue)
 		{
-			textEditor.Remove (attr.Region);
-			textEditor.SetCaretTo (attr.Region.BeginLine, attr.Region.BeginColumn);
-			textEditor.InsertAtCaret (String.Format ("{0}=\"{1}\"", attr.Name.Name, newValue));
-			
+			Gtk.Application.Invoke (delegate {
+				textEditor.Remove (attr.Region);
+				textEditor.SetCaretTo (attr.Region.BeginLine, attr.Region.BeginColumn);
+				textEditor.InsertAtCaret (String.Format ("{0}=\"{1}\"", attr.Name.Name, newValue));
+			});
 			txtDocDirty = true;
 		}
 
@@ -476,6 +478,7 @@ namespace AspNetEdit.Editor.ComponentModel
 					string content = "<div class=\"aspnetedit_control_container\">";
 					StringWriter strWriter = new StringWriter ();
 					HtmlTextWriter writer = new HtmlTextWriter (strWriter);
+
 					control.RenderControl (writer);
 					writer.Close ();
 					strWriter.Flush ();
@@ -611,7 +614,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			foreach (XAttribute attr in element.Attributes) {
 				desc = pCollection.Find (attr.Name.Name, true);
-				if (desc != null) {
+				if ((desc != null) && !desc.IsReadOnly) {
 					var converter = TypeDescriptor.GetConverter (desc.PropertyType) as TypeConverter;
 					if (converter != null) {
 						desc.SetValue (component, converter.ConvertFromString (attr.Value));
