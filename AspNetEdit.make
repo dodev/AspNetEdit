@@ -88,6 +88,7 @@ REFERENCES =  \
 	System.Drawing.Design \
 	System.Runtime.Serialization \
 	System.Web \
+	System.Web.Extensions \
 	System.Xml
 
 DLL_REFERENCES = 

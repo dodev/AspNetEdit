@@ -171,6 +171,7 @@
       <Package>monodevelop</Package>
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Web.Extensions" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
@@ -212,6 +213,10 @@
     <None Include="designer_context\js\handlers.js" />
     <None Include="designer_context\js\jquery-1.7.2.min.js" />
     <None Include="designer_context\js\main.js" />
+    <None Include="designer_context\js\SelectionManager.js" />
+    <None Include="designer_context\js\SignalManager.js" />
+    <None Include="designer_context\js\globals.js" />
+    <None Include="designer_context\js\config.js" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>

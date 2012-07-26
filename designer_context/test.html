@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8" />
 <script type="text/javascript" src="js/jquery-1.7.2.min.js"></script>
-<script type="text/javascript" src="js/main.js"></script>
+<script type="text/javascript" src="js/config.js"></script>
 <script type="text/javascript" src="js/handlers.js"></script>
+<script type="text/javascript" src="js/SelectionManager.js"></script>
+<script type="text/javascript" src="js/SignalManager.js"></script>
+<script type="text/javascript" src="js/globals.js"></script>
+<script type="text/javascript" src="js/main.js"></script>
 <link rel="stylesheet" type="text/css" href="css/control_style.css" />
 <title></title>
 </head>
@@ -17,17 +21,45 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam volutpat urna a
 <p>
 Quisque tincidunt, elit eu molestie volutpat, enim sapien luctus nibh, at tempor felis odio volutpat leo. Sed orci metus, egestas et imperdiet id, suscipit sed quam. Donec vel est ac ante volutpat sagittis in quis dolor. Donec ullamcorper mi leo, at vulputate arcu. Maecenas ullamcorper feugiat nunc at pulvinar. Duis id augue et quam ultrices accumsan dictum vel urna. Fusce id justo a magna dictum sodales.
 </p>
-<form>
-	<div class="aspnetedit_control_container">
-		<input type="text" name="someone" id="textBox1" />
-	</div>
-	<div class="aspnetedit_control_container">
-		<input type="text" name="someone" id="textBox2" />
-	</div>	
-	<div class="aspnetedit_control_container">
-		<input type="submit" name="someone" id="button1" />
-	</div>
-</form>
+<div id="aspnetedit_init_values_container" style="display: none;">
+<span id="aspnetedit_selectable_items">["WebFormPage1","RadioButtonList1","HtmlInputPassword1","TextBox1","Button1","calendar1","AnchorButton"]</span><span id="aspnetedit_selected_items">["RadioButtonList1","HtmlInputPassword1"]</span>
+</div>
+
+	<form id="form1">
+	
+		<span id="RadioButtonList1"><input id="RadioButtonList1_0" type="radio" name="RadioButtonList1" value="Item 1" /><label for="RadioButtonList1_0">Item 1</label><br /><input id="RadioButtonList1_1" type="radio" name="RadioButtonList1" value="Item 2" /><label for="RadioButtonList1_1">Item 2</label><br /><input id="RadioButtonList1_2" type="radio" name="RadioButtonList1" value="Item 3" /><label for="RadioButtonList1_2">Item 3</label></span>
+		<input name="HtmlInputPassword1" id="HtmlInputPassword1" type="password" />
+		<input type="text" value="some text" name="TextBox1" id="TextBox1" />
+		<div style="position: absolute; top: 0; left: 0;"><input type="submit" name="Button1" value="Click me!" id="Button1" style="background-color:#F00042;border-style:None;" /></div>
+		<table cellspacing="0" cellpadding="2" rules="all" id="calendar1" style="border-width:1px;border-style:solid;border-collapse:collapse;">
+	<tr>
+		<td colspan="7" style="background-color:Silver;"><table style="width:100%;">
+			<tr>
+				<td style="width:15%;">&lt;</td><td align="center" style="width:70%;">July, 2012</td><td align="right" style="width:15%;">&gt;</td>
+			</tr>
+		</table></td>
+	</tr><tr>
+		<th abbr="Sunday" scope="col" align="center">Sunday</th><th abbr="Monday" scope="col" align="center">Monday</th><th abbr="Tuesday" scope="col" align="center">Tuesday</th><th abbr="Wednesday" scope="col" align="center">Wednesday</th><th abbr="Thursday" scope="col" align="center">Thursday</th><th abbr="Friday" scope="col" align="center">Friday</th><th abbr="Saturday" scope="col" align="center">Saturday</th>
+	</tr><tr>
+		<td align="center" style="width:14%;">24</td><td align="center" style="width:14%;">25</td><td align="center" style="width:14%;">26</td><td align="center" style="width:14%;">27</td><td align="center" style="width:14%;">28</td><td align="center" style="width:14%;">29</td><td align="center" style="width:14%;">30</td>
+	</tr><tr>
+		<td align="center" style="width:14%;">1</td><td align="center" style="width:14%;">2</td><td align="center" style="width:14%;">3</td><td align="center" style="width:14%;">4</td><td align="center" style="width:14%;">5</td><td align="center" style="width:14%;">6</td><td align="center" style="width:14%;">7</td>
+	</tr><tr>
+		<td align="center" style="width:14%;">8</td><td align="center" style="width:14%;">9</td><td align="center" style="width:14%;">10</td><td align="center" style="width:14%;">11</td><td align="center" style="width:14%;">12</td><td align="center" style="width:14%;">13</td><td align="center" style="width:14%;">14</td>
+	</tr><tr>
+		<td align="center" style="width:14%;">15</td><td align="center" style="width:14%;">16</td><td align="center" style="width:14%;">17</td><td align="center" style="width:14%;">18</td><td align="center" style="width:14%;">19</td><td align="center" style="width:14%;">20</td><td align="center" style="width:14%;">21</td>
+	</tr><tr>
+		<td align="center" style="width:14%;">22</td><td align="center" style="width:14%;">23</td><td align="center" style="width:14%;">24</td><td align="center" style="width:14%;">25</td><td align="center" style="width:14%;">26</td><td align="center" style="width:14%;">27</td><td align="center" style="width:14%;">28</td>
+	</tr><tr>
+		<td align="center" style="width:14%;">29</td><td align="center" style="width:14%;">30</td><td align="center" style="width:14%;">31</td><td align="center" style="width:14%;">1</td><td align="center" style="width:14%;">2</td><td align="center" style="width:14%;">3</td><td align="center" style="width:14%;">4</td>
+	</tr>
+</table>
+		<a id="AnchorButton" title="Hello World!" disabled="disabled">
+         Click here
+      	</a>
+      	
+      	
+	</form>
 <a href="http://abv.bg">Go to Abv.bg</a>
 </body>
 </html>

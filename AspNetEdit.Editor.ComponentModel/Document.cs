@@ -110,8 +110,12 @@ namespace AspNetEdit.Editor.ComponentModel
 			string scriptDir = "js";
 			string[] scripts = {
 				"jquery-1.7.2.min.js",
+				"config.js",
+				"handlers.js",
+				"SelectionManager.js",
+				"SignalManager.js",
+				"globals.js",
 				"main.js",
-				"handlers.js"
 			};
 			string styleDir = "css";
 			string[] styleSheets = {
@@ -448,8 +452,38 @@ namespace AspNetEdit.Editor.ComponentModel
 		}
 
 		#endregion
-		
+
 		#region Serialization
+
+		string GetDesignerInitParams ()
+		{
+			List<string> clientIds = new List<string> (host.Container.Components.Count);
+			foreach (IComponent comp in host.Container.Components) {
+				clientIds.Add ((comp as Control).ClientID);
+			}
+
+			var selServ = host.GetService (typeof (ISelectionService)) as ISelectionService;
+			if (selServ == null)
+				throw new Exception ("Could not load selection service");
+			ICollection col = selServ.GetSelectedComponents ();
+			List<string> selectedIds = new List<string> (col.Count);
+			foreach (IComponent comp in col) {
+				selectedIds.Add ((comp as Control).ClientID);
+			}
+
+			System.Web.Script.Serialization.JavaScriptSerializer jsonizer = new System.Web.Script.Serialization.JavaScriptSerializer ();
+			StringBuilder strBuilder = new StringBuilder ();
+			strBuilder.Append ("<div id=\"aspnetedit_init_values_container\" style=\"display:none;\"> ");
+			strBuilder.Append ("<span id=\"aspnetedit_selectable_items\">");
+			jsonizer.Serialize (clientIds.ToArray (), strBuilder);
+			strBuilder.Append ("</span>");
+			strBuilder.Append ("<span id=\"aspnetedit_selected_items\">");
+			jsonizer.Serialize (selectedIds.ToArray (), strBuilder);
+			strBuilder.Append ("</span>");
+			strBuilder.Append ("</div>");
+
+			return strBuilder.ToString ();
+		}
 		
 		TextLocation prevTagLocation = new TextLocation (TextLocation.MinLine, TextLocation.MinColumn);
 
@@ -475,19 +509,16 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				// genarete placeholder
 				if (control != null) {
-					string content = "<div class=\"aspnetedit_control_container\">";
 					StringWriter strWriter = new StringWriter ();
 					HtmlTextWriter writer = new HtmlTextWriter (strWriter);
-
 					control.RenderControl (writer);
 					writer.Close ();
 					strWriter.Flush ();
-					content += strWriter.ToString ();
-					content += "</div>";
+					string controlTag = strWriter.ToString ();
 					strWriter.Close ();
 					if (!element.IsSelfClosing)
 						prevTagLocation = element.ClosingTag.Region.End;
-					return content;
+					return controlTag;
 				}
 			}
 
@@ -513,10 +544,14 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				// we are currentyl on the head tag
 				// add designer content - js and css
-				if (element.Name.Name.ToString () == "head") {
+				if (element.Name.Name.ToLower () == "head") {
 					output += designerContext;
 				}
-				
+
+				if (element.Name.Name.ToLower () == "body") {
+					output += GetDesignerInitParams ();
+				}
+
 				// serializing the childnodes if any
 				foreach (MonoDevelop.Xml.StateEngine.XNode nd in element.Nodes) {
 					// get the text before the openning tag of the child element

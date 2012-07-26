@@ -1,2 +1,2 @@
-.aspnetedit_control_container { margin: 0; padding: 0; overflow: auto; display: inline-block; }
-.aspnetedit_selected { border: 1px dashed #777; }
+.aspnetedit_selected { border: 2px dashed #777; }
+.aspnetedit_control_marker { position: absolute;  padding: 2px; z-index: 99999;}
