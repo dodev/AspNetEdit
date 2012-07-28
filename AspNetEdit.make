@@ -36,6 +36,7 @@ FILES =  \
 	AspNetEdit.Editor.ComponentModel/DesignerHost.cs \
 	AspNetEdit.Editor.ComponentModel/Document.cs \
 	AspNetEdit.Editor.ComponentModel/DocumentDirective.cs \
+	AspNetEdit.Editor.ComponentModel/DocumentSerializer.cs \
 	AspNetEdit.Editor.ComponentModel/EventBindingService.cs \
 	AspNetEdit.Editor.ComponentModel/ExtenderListService.cs \
 	AspNetEdit.Editor.ComponentModel/MenuCommandService.cs \

@@ -199,6 +199,7 @@
     <Compile Include="AspNetEdit.Editor.ComponentModel\EventBindingService.cs" />
     <Compile Include="AspNetEdit.Editor\EditorProcess.cs" />
     <Compile Include="AspNetEdit.Editor\DesignerMessageManager.cs" />
+    <Compile Include="AspNetEdit.Editor.ComponentModel\DocumentSerializer.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AspNetEdit.addin.xml">

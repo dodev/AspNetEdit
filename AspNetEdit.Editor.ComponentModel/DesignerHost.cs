@@ -65,6 +65,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		private DesignContainer container;
 		private IComponent rootComponent = null;
 		private Document rootDocument;
+		private DocumentSerializer serializer;
 
 		public IContainer Container
 		{
@@ -349,6 +350,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			this.Container.Add (new WebFormPage());
 			this.rootDocument = new Document ((Control)rootComponent, this, txtEditor);
+			serializer = new DocumentSerializer (this);
 
 			loading = false;
 			OnLoadComplete ();
@@ -364,8 +366,8 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			// TODO: strip user's JS. Add AspNetEdit's JS
 			// TODO: IDesigners for ASP.NET controls components
-			
-			return  rootDocument.ToDesignTimeHtml ();
+			string html = serializer.GetDesignableHtml ();
+			return html;
 		}
 
 		public void Reset ()

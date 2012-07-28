@@ -51,7 +51,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		#region IRootDesigner Members
 
 		public object GetView (ViewTechnology technology) {
-			if (technology == ViewTechnology.Passthrough)
+			if (technology == ViewTechnology.Default)
 				return view;
 			else return null;
 		}

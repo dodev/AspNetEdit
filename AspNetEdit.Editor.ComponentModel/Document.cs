@@ -152,7 +152,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				}
 	
 				// serialize the tree to designable HTML
-				designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
+				//designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
 			} catch (Exception ex) {
 				System.Diagnostics.Trace.WriteLine (ex.ToString ());
 			}
@@ -165,7 +165,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		/// <summary>
 		/// Parse the TextEditor.Text document and tracks the txtDocDirty flag.
 		/// </summary>
-		AspNetParsedDocument Parse ()
+		public AspNetParsedDocument Parse ()
 		{
 			if (txtDocDirty) {
 				aspNetDoc = Parse (textEditor.Text, textEditor.FileName);
@@ -287,85 +287,6 @@ namespace AspNetEdit.Editor.ComponentModel
 			txtDocDirty = true;
 		}
 
-		public void UpdateTag (string id, Control updatedControl)
-		{
-			try {
-				Dictionary <string, string> properties = new Dictionary<string, string> (StringComparer.InvariantCultureIgnoreCase);			// we need the type to get the properties
-				System.Type controlType = updatedControl.GetType ();
-	
-				// filter the properties to get the changed ones
-				var collection = TypeDescriptor.GetProperties (controlType, new Attribute[] {BrowsableAttribute.Yes}) as PropertyDescriptorCollection;
-	
-				foreach (PropertyDescriptor desc in collection) {
-					try {
-					var defVal = desc.Attributes[typeof (DefaultValueAttribute)] as DefaultValueAttribute;
-
-					if ((defVal != null) && !desc.GetValue(updatedControl).Equals(defVal.Value)) {
-						
-						// workaround for a bug in System.Web.UI.Control
-						// the DefaultValueAttribute is set to a string - "0", while it should be of enum ViewStateMode
-						// and so that the ViewStateMode property appears to always have a value different from the default
-						if (desc.Name == "ViewStateMode") {
-							var val = (ViewStateMode)desc.GetValue (updatedControl);
-							if (val == ViewStateMode.Inherit) // ViewStateMode.Inherit is the default
-								continue;
-						}
-
-						var converter = TypeDescriptor.GetConverter (desc.PropertyType) as TypeConverter;
-						if (converter != null) {
-							properties.Add (desc.Name, converter.ConvertToString (desc.GetValue (updatedControl)));
-						} else
-							properties.Add (desc.Name, desc.GetValue (updatedControl).ToString ());
-					}
-					} catch (Exception ex) {
-						// something
-						System.Diagnostics.Trace.WriteLine (ex.ToString ());
-					}
-				}
-	
-				// get the tag node
-				AspNetParsedDocument doc = Parse ();
-				XElement el = GetControlTag (doc.XDocument.RootElement, id);
-				if (el == null)
-					throw new Exception ("Could not find element with id = " + id);
-	
-				// if the id was changed. i.e. is in the filtered properties
-				if (properties.ContainsKey("id")) {
-					if (host.GetComponent (properties["id"]) != null)
-						throw new Exception ("Element with that name already excists: "); // TODO: display warning instead of exception
-	
-					// update the key of the component in the IContainer
-					host.Container.Remove (updatedControl);
-					host.Container.Add (updatedControl, properties["id"]);
-				}
-	
-				// add to the properies array all the attributes that weren't changed
-				foreach (XAttribute attr in el.Attributes) {
-					if (!properties.ContainsKey (attr.Name.Name)) 
-						properties[attr.Name.Name] = attr.Value;
-				}
-	
-				// build the new node
-				string attributes = string.Empty;
-	
-				foreach (KeyValuePair<string, string> kv in properties)
-					attributes += string.Format (" {0}=\"{1}\"", kv.Key, kv.Value);
-	
-				string newTag = string.Format ("<{0}{1}{2}>", el.Name.FullName, attributes, el.IsSelfClosing ? " /" : "");
-	
-				// and replace the node in the TextEditor
-				textEditor.Remove (el.Region);
-				textEditor.SetCaretTo (el.Region.BeginLine, el.Region.BeginColumn);
-				textEditor.InsertAtCaret (newTag);
-			} catch (Exception ex) {
-				System.Diagnostics.Trace.WriteLine (ex.ToString ());
-			}
-
-			// update the document's representation
-			txtDocDirty = true;
-			PersistDocument ();
-		}
-
 		public void UpdateTag (IComponent component, MemberDescriptor memberDesc, object newVal)
 		{
 			string key = String.Empty;
@@ -455,152 +376,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		#region Serialization
 
-		string GetDesignerInitParams ()
-		{
-			List<string> clientIds = new List<string> (host.Container.Components.Count);
-			foreach (IComponent comp in host.Container.Components) {
-				clientIds.Add ((comp as Control).ClientID);
-			}
 
-			var selServ = host.GetService (typeof (ISelectionService)) as ISelectionService;
-			if (selServ == null)
-				throw new Exception ("Could not load selection service");
-			ICollection col = selServ.GetSelectedComponents ();
-			List<string> selectedIds = new List<string> (col.Count);
-			foreach (IComponent comp in col) {
-				selectedIds.Add ((comp as Control).ClientID);
-			}
 
-			System.Web.Script.Serialization.JavaScriptSerializer jsonizer = new System.Web.Script.Serialization.JavaScriptSerializer ();
-			StringBuilder strBuilder = new StringBuilder ();
-			strBuilder.Append ("<div id=\"aspnetedit_init_values_container\" style=\"display:none;\"> ");
-			strBuilder.Append ("<span id=\"aspnetedit_selectable_items\">");
-			jsonizer.Serialize (clientIds.ToArray (), strBuilder);
-			strBuilder.Append ("</span>");
-			strBuilder.Append ("<span id=\"aspnetedit_selected_items\">");
-			jsonizer.Serialize (selectedIds.ToArray (), strBuilder);
-			strBuilder.Append ("</span>");
-			strBuilder.Append ("</div>");
-
-			return strBuilder.ToString ();
-		}
-		
-		TextLocation prevTagLocation = new TextLocation (TextLocation.MinLine, TextLocation.MinColumn);
-
-		string serializeNode (MonoDevelop.Xml.StateEngine.XNode node)
-		{
-			prevTagLocation = node.Region.End;
-
-			var element = node as XElement;
-
-			if (element == null) {
-
-				return string.Empty;
-			}
-
-			string id = GetAttributeValueCI (element.Attributes, "id");
-
-			// Controls are runat="server" and have unique id in the Container
-			if (element.Name.HasPrefix || IsRunAtServer (element)) {
-				IComponent component = host.GetComponent (id);
-
-				// HTML controls, doesn't need special rendering
-				var control = component as Control;
-
-				// genarete placeholder
-				if (control != null) {
-					StringWriter strWriter = new StringWriter ();
-					HtmlTextWriter writer = new HtmlTextWriter (strWriter);
-					control.RenderControl (writer);
-					writer.Close ();
-					strWriter.Flush ();
-					string controlTag = strWriter.ToString ();
-					strWriter.Close ();
-					if (!element.IsSelfClosing)
-						prevTagLocation = element.ClosingTag.Region.End;
-					return controlTag;
-				}
-			}
-
-			// strip script tags
-			if (element.Name.Name.ToLower () == "script")
-				return string.Empty;
-
-			// the node is a html element
-			string output = "<" + element.Name.FullName;
-			
-			// print the attributes
-			foreach (MonoDevelop.Xml.StateEngine.XAttribute attr in element.Attributes) {
-				string name = attr.Name.Name.ToLower ();
-				// strip runat and on* event attributes
-				if ((name != "runat") && (name.Substring (0, 2).ToLower () != "on"))
-					output += " " + attr.Name.FullName + "=\"" + attr.Value + "\"";
-			}
-			
-			if (element.IsSelfClosing) {
-				output += " />";
-			} else {
-				output += ">";
-
-				// we are currentyl on the head tag
-				// add designer content - js and css
-				if (element.Name.Name.ToLower () == "head") {
-					output += designerContext;
-				}
-
-				if (element.Name.Name.ToLower () == "body") {
-					output += GetDesignerInitParams ();
-				}
-
-				// serializing the childnodes if any
-				foreach (MonoDevelop.Xml.StateEngine.XNode nd in element.Nodes) {
-					// get the text before the openning tag of the child element
-					output += GetTextFromEditor (prevTagLocation, nd.Region.Begin);
-					// and the element itself
-					output += serializeNode (nd);
-				}
-				
-				// printing the text after the closing tag of the child elements
-				int lastChildEndLine = element.Region.EndLine;
-				int lastChildEndColumn = element.Region.EndColumn;
-				
-				// if the element have 1+ children
-				if (element.LastChild != null) {
-					var lastChild = element.LastChild as MonoDevelop.Xml.StateEngine.XElement;
-					// the last child is an XML tag
-					if (lastChild != null) {
-						// the tag is selfclosing
-						if (lastChild.IsSelfClosing) {
-							lastChildEndLine = lastChild.Region.EndLine;
-							lastChildEndColumn = lastChild.Region.EndColumn;
-							// the tag is not selfclosing and has a closing tag
-						} else if (lastChild.ClosingTag != null) {
-							lastChildEndLine = lastChild.ClosingTag.Region.EndLine;
-							lastChildEndColumn = lastChild.ClosingTag.Region.EndColumn;
-						} else {
-							// TODO: the element is not closed. Warn the user
-						}
-						// the last child is not a XML element. Probably AspNet tag. TODO: find the end location of that tag
-					} else {
-						lastChildEndLine = element.LastChild.Region.EndLine;
-						lastChildEndLine = element.LastChild.Region.EndLine;
-					}
-				}
-				
-				if (element.ClosingTag != null) {
-					output += GetTextFromEditor (new TextLocation (lastChildEndLine, lastChildEndColumn), element.ClosingTag.Region.Begin);
-					prevTagLocation = element.ClosingTag.Region.End;
-				} else {
-					// TODO: the element is not closed. Warn the user
-				}
-				
-				output += "</" + element.Name.FullName + ">";
-			}
-			
-			return output;
-		}
-
-		private string GetTextFromEditor (TextLocation start, TextLocation end)
+		public string GetTextFromEditor (TextLocation start, TextLocation end)
 		{
 			if (textEditor == null)
 				throw new NullReferenceException ("The SourceEditorView is not set. Can't process document for text nodes.");

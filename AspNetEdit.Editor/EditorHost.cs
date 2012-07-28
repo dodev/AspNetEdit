@@ -112,7 +112,7 @@ namespace AspNetEdit.Editor
 			System.Diagnostics.Trace.WriteLine ("DesignerHost activated; getting designer view");
 			
 			IRootDesigner rootDesigner = (IRootDesigner)designerHost.GetDesigner (designerHost.RootComponent);
-			designerView = (RootDesignerView)rootDesigner.GetView (ViewTechnology.Passthrough);
+			designerView = (RootDesignerView)rootDesigner.GetView (ViewTechnology.Default);
 			designerView.Realized += delegate {
 				System.Diagnostics.Trace.WriteLine ("Designer view realized");
 				designerHost.RootDocument.PersistDocument ();
