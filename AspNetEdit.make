@@ -50,9 +50,9 @@ FILES =  \
 	AspNetEdit.Editor.ComponentModel/TypeDescriptorFilterService.cs \
 	AspNetEdit.Editor.ComponentModel/TypeResolutionService.cs \
 	AspNetEdit.Editor.ComponentModel/WebFormPage.cs \
+	AspNetEdit.Editor.DesignerLink/DesignerMessageManager.cs \
 	AspNetEdit.Editor.UI/PropertyGrid.cs \
 	AspNetEdit.Editor.UI/RootDesignerView.cs \
-	AspNetEdit.Editor/DesignerMessageManager.cs \
 	AspNetEdit.Editor/EditorHost.cs \
 	AspNetEdit.Editor/EditorProcess.cs \
 	AspNetEdit.Integration/AspNetEditDisplayBinding.cs \

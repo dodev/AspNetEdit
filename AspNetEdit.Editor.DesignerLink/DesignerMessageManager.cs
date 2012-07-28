@@ -33,7 +33,7 @@ using System.Collections.Generic;
 
 using AspNetEdit.Editor.ComponentModel;
 
-namespace AspNetEdit.Editor
+namespace AspNetEdit.Editor.DesignerLink
 {
 	public class DesignerMessageManager
 	{

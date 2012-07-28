@@ -36,8 +36,8 @@ using System.Web.UI;
 using System.Collections;
 using System.IO;
 
-using AspNetEdit.Editor;
 using AspNetEdit.Editor.ComponentModel;
+using AspNetEdit.Editor.DesignerLink;
 
 using Gtk;
 using WebKit;
