@@ -34,6 +34,7 @@ extension_jar = $(shell pwd)/$(BUILD_DIR)/$(extension_name).jar
 FILES =  \
 	AspNetEdit.Editor.ComponentModel/DesignContainer.cs \
 	AspNetEdit.Editor.ComponentModel/DesignerHost.cs \
+	AspNetEdit.Editor.ComponentModel/DesignerSerializer.cs \
 	AspNetEdit.Editor.ComponentModel/Document.cs \
 	AspNetEdit.Editor.ComponentModel/DocumentDirective.cs \
 	AspNetEdit.Editor.ComponentModel/DocumentSerializer.cs \
@@ -57,6 +58,7 @@ FILES =  \
 	AspNetEdit.Integration/AspNetEditDisplayBinding.cs \
 	AspNetEdit.Integration/AspNetEditViewContent.cs \
 	AspNetEdit.Integration/MonoDevelopProxy.cs \
+	AspNetEdit.Tools/XDocumentHelper.cs \
 	AssemblyInfo.cs
 
 DATA_FILES = 

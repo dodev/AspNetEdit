@@ -66,10 +66,15 @@ namespace AspNetEdit.Editor.ComponentModel
 		private IComponent rootComponent = null;
 		private Document rootDocument;
 		private DocumentSerializer serializer;
+		private DesignerSerializer designerSerializer;
 
 		public IContainer Container
 		{
 			get { return container; }
+		}
+
+		public DesignerSerializer AspNetSerializer {
+			get { return designerSerializer; }
 		}
 		
 		public IComponent CreateComponent (Type componentClass, string name)
@@ -124,7 +129,8 @@ namespace AspNetEdit.Editor.ComponentModel
 		public void OnComponentUpdated (object o, ComponentChangedEventArgs args)
 		{
 			// FIXME: a bug in ComponentChangedEventArgs - switches the return value of NewValue and OldValue
-			this.RootDocument.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
+			//this.RootDocument.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
+			designerSerializer.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
 		}
 
 		public void DestroyComponent (IComponent component)
@@ -198,11 +204,6 @@ namespace AspNetEdit.Editor.ComponentModel
 		}
 
 		#endregion
-
-		public void UpdateNode (string id, IComponent updatedState)
-		{
-			//rootDocument.UpdateTag (id, updatedState as Control);
-		}
 
 		#region Transaction stuff
 
@@ -351,21 +352,15 @@ namespace AspNetEdit.Editor.ComponentModel
 			this.Container.Add (new WebFormPage());
 			this.rootDocument = new Document ((Control)rootComponent, this, txtEditor);
 			serializer = new DocumentSerializer (this);
+			designerSerializer = new DesignerSerializer (this);
+			rootDocument.Changed += new EventHandler (Document_OnChanged);
 
 			loading = false;
 			OnLoadComplete ();
 		}
 		
-//		public void DisplayDesignerSurface ()
-//		{
-//			// TODO: check for activated, loaded document etc.
-//			rootDocument.ShowDesignerSurface ();
-//		}
-		
 		public string GetDesignableHtml ()
 		{
-			// TODO: strip user's JS. Add AspNetEdit's JS
-			// TODO: IDesigners for ASP.NET controls components
 			string html = serializer.GetDesignableHtml ();
 			return html;
 		}
@@ -382,20 +377,45 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
-//		public void SaveDocumentToFile (Stream file)
-//		{
-//			StreamWriter writer = new StreamWriter (file);
-//
-//			writer.Write(RootDocument.PersistDocument ());
-//			writer.Flush ();
-//		}
-//		
-//		public string PersistDocument ()
-//		{
-//			return RootDocument.PersistDocument ();
-//		}
-
 		#endregion 
+
+		public void Document_OnChanged (object o, EventArgs args)
+		{
+			System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(SerializeDocument));
+			serializerThread.Start ();
+		}
+
+		public void SerializeDocument ()
+		{
+			string html = serializer.GetDesignableHtml ();
+
+			// fire the event
+			OnDocumentChanged (html);
+		}
+
+		public class DocumentChangedEventArgs: EventArgs
+		{
+			string html;
+
+			public DocumentChangedEventArgs (string newHtml) : base ()
+			{
+				html = newHtml;
+			}
+
+			public string Html {
+				get { return html; }
+			}
+		}
+
+		public delegate void DocumentChangedEventHandler (DocumentChangedEventArgs args);
+
+		public event DocumentChangedEventHandler DocumentChanged;
+
+		public void OnDocumentChanged (string newHtml)
+		{
+			if (DocumentChanged != null)
+				DocumentChanged (new DocumentChangedEventArgs (newHtml));
+		}
 
 		#region Wrapping parent ServiceContainer
 
@@ -453,6 +473,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				//and the container
 				container.Dispose ();
+
+				rootDocument.Destroy ();
 
 				disposed = true;
 			}

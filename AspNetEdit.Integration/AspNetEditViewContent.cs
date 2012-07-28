@@ -441,7 +441,7 @@ namespace AspNetEdit.Integration
 
 		public void OnChanged (object obj)
 		{
-			editorProcess.Editor.DesignerHost.UpdateNode (editedComponentId, obj as IComponent);
+
 		}
 		#endregion
 		

@@ -1,5 +1,6 @@
 // 
-// DocumentSerializer.cs
+// DocumentSerializer.cs - Generates HTML needed for
+//						the designer surface
 //  
 // Author:
 //       Petar Dodev <petar.dodev@gmail.com>
@@ -38,6 +39,7 @@ using ICSharpCode.NRefactory;
 using MonoDevelop.SourceEditor;
 
 using AspNetEdit.Editor.UI;
+using AspNetEdit.Tools;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -73,10 +75,10 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (element == null)
 				return;
 
-			string id = GetAttributeValueCI (element.Attributes, "id");
+			string id = XDocumentHelper.GetAttributeValueCI (element.Attributes, "id");
 
 			// Controls are runat="server" and have unique id in the Container
-			if (element.Name.HasPrefix || IsRunAtServer (element)) {
+			if (element.Name.HasPrefix || XDocumentHelper.IsRunAtServer (element)) {
 				IComponent component = host.GetComponent (id);
 
 				// HTML controls, doesn't need special rendering
@@ -171,30 +173,6 @@ namespace AspNetEdit.Editor.ComponentModel
 				
 				sb.AppendFormat ("</{0}>", element.Name.FullName);
 			}
-		}
-
-		bool IsRunAtServer (XElement el)
-		{
-			XName runat = new XName ("runat");
-			foreach (XAttribute a  in el.Attributes) {
-				if ((a.Name.ToLower () == runat) && (a.Value.ToLower () == "server"))
-					return true;
-			}
-			return false;
-		}
-
-		/// <summary>
-		/// Gets the attribute value. case insensitive
-		/// </summary>
-		string GetAttributeValueCI (XAttributeCollection attributes, string key)
-		{
-			XName nameKey = new XName (key.ToLowerInvariant ());
-
-			foreach (XAttribute attr in attributes) {
-				if (attr.Name.ToLower () == nameKey)
-					return attr.Value;
-			}
-			return string.Empty;
 		}
 
 		/// <summary>

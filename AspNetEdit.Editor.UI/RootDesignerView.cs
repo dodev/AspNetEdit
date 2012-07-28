@@ -36,6 +36,7 @@ using System.Web.UI;
 using System.Collections;
 using System.IO;
 
+using AspNetEdit.Editor;
 using AspNetEdit.Editor.ComponentModel;
 
 using Gtk;
@@ -45,10 +46,11 @@ namespace AspNetEdit.Editor.UI
 {
 	public class RootDesignerView : WebView
 	{
-		private DesignerHost host;
-		protected bool active = false;
+		DesignerHost host;
+		bool active = false;
 		string baseUri;
 		string designerContext;
+		DesignerMessageManager msgManager;
 		
 		// dodev: To be tested with WebKit
 		//there's weird bug where a second Gecko instance *can't* be created
@@ -110,6 +112,8 @@ namespace AspNetEdit.Editor.UI
 			sb.AppendLine ();
 
 			designerContext = sb.ToString ();
+
+			msgManager = new DesignerMessageManager (host as DesignerHost);
 		}
 
 		public string DesignerContext {
@@ -129,7 +133,16 @@ namespace AspNetEdit.Editor.UI
 		{
 			this.LoadString (htmlDocument, null, encoding, baseUri);
 		}
-		
+
+		void WebView_OnTitleChanged (object o, WebKit.TitleChangedArgs args)
+		{
+			try {
+				msgManager.HandleMessage (args.Title);
+			} catch (Exception ex) {
+				System.Diagnostics.Trace.WriteLine (ex.ToString ());
+			}
+		}
+
 		#endregion
 	}
 }

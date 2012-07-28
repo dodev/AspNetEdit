@@ -40,6 +40,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
+using System.Threading;
 
 using MonoDevelop.Xml.StateEngine;
 using MonoDevelop.AspNet;
@@ -49,6 +50,7 @@ using MonoDevelop.SourceEditor;
 
 using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.TypeSystem;
+using AspNetEdit.Tools;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -65,9 +67,10 @@ namespace AspNetEdit.Editor.ComponentModel
 		AspNetParser parser;
 		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
-		bool txtDocDirty; // notes when the content of the textEditor doesn't match the content of the XDocument
-		string designableHtml = String.Empty;
-		string designerContext = String.Empty;
+		// notes when the content of the textEditor doesn't match the content of the XDocument
+		bool txtDocDirty; 
+
+		ManualResetEvent updateEditorContent;
 		
 		///<summary>Creates a new document</summary>
 		public Document (Control parent, DesignerHost host, string documentName)
@@ -99,65 +102,56 @@ namespace AspNetEdit.Editor.ComponentModel
 			directives = null;
 			aspNetDoc = null;
 			txtDocDirty = true;
-			InitDesignerContext ();
+			updateEditorContent = new ManualResetEvent (true);
 		}
 
-		public void InitDesignerContext ()
-		{
-			string scriptTag = "\n<script type=\"text/javascript\" src=\"{0}\"></script>";
-			string cssLinkTag = "\n<link rel=\"stylesheet\" type=\"text/css\" href=\"{0}\" />";
+		public bool TxtDocDirty {
+			set {
+				if (value) {
+					updateEditorContent.Set ();
+					OnChanged ();
+				} else
+					updateEditorContent.Reset ();
 
-			string scriptDir = "js";
-			string[] scripts = {
-				"jquery-1.7.2.min.js",
-				"config.js",
-				"handlers.js",
-				"SelectionManager.js",
-				"SignalManager.js",
-				"globals.js",
-				"main.js",
-			};
-			string styleDir = "css";
-			string[] styleSheets = {
-				"control_style.css"
-			};
-
-			designerContext = String.Empty;
-			foreach (string script in scripts)
-				designerContext += String.Format (scriptTag, Path.Combine (scriptDir, script));
-			foreach (string styleFile in styleSheets)
-				designerContext += String.Format (cssLinkTag, Path.Combine (styleDir, styleFile));
-
-			designerContext += "\n";
-		}
-
-		public void PersistDocument ()
-		{
-			System.Threading.Thread worker = new System.Threading.Thread (new System.Threading.ThreadStart(StartPersistingDocument));
-			worker.Start ();
-		}
-
-		public void StartPersistingDocument ()
-		{
-			OnChanging ();
-			try {
-				// parse the contents of the textEditor
-				Parse ();
-	
-				// initializing the dicts of directives and controls tags
-				if (directives == null) {
-					directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-					CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
-					ParseControls ();
-				}
-	
-				// serialize the tree to designable HTML
-				//designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
-			} catch (Exception ex) {
-				System.Diagnostics.Trace.WriteLine (ex.ToString ());
+				txtDocDirty = value;
 			}
-			OnChanged ();
+			get { return txtDocDirty; }
 		}
+
+//		public void PersistDocument ()
+//		{
+//			System.Threading.Thread worker = new System.Threading.Thread (new System.Threading.ThreadStart(StartPersistingDocument));
+//			worker.Start ();
+//		}
+//
+//		public void StartPersistingDocument ()
+//		{
+//			OnChanging ();
+//			try {
+//				// wait until the there have been made changes to the editor
+//				updateEditorContent.WaitOne ();
+//
+//				// parse the contents of the textEditor
+//				Parse ();
+//	
+//				// initializing the dicts of directives and controls tags
+//				if (directives == null) {
+//					directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
+//					CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
+//					ParseControls ();
+//				}
+//	
+//				// serialize the tree to designable HTML
+//				//designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
+//			} catch (Exception ex) {
+//				System.Diagnostics.Trace.WriteLine (ex.ToString ());
+//			} finally {
+//				// set the event to not signaled
+//				updateEditorContent.Reset ();
+//			}
+//
+//			OnChanged ();
+//		}
 
 
 		#region StateEngine parser
@@ -217,8 +211,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			var element = node as XElement;
 
-			if (element.Name.HasPrefix || IsRunAtServer (element)) {
-				string id = GetAttributeValueCI (element.Attributes, "id");
+			if (element.Name.HasPrefix || XDocumentHelper.IsRunAtServer (element)) {
+				string id = XDocumentHelper.GetAttributeValueCI (element.Attributes, "id");
 
 				try {
 					// check the DesignContainer if a component for that node already exists
@@ -229,7 +223,7 @@ namespace AspNetEdit.Editor.ComponentModel
 	
 							// add id to the component, for later recognition
 							if (id == string.Empty) {
-								InsertAttribute (element, "id", comp.Site.Name);
+								host.AspNetSerializer.SetAttribtue (element, "id", comp.Site.Name);
 								return;
 							}
 						}
@@ -249,113 +243,40 @@ namespace AspNetEdit.Editor.ComponentModel
 				
 		}
 
-		// adds an attribute to the end of the openning  tag
-		void InsertAttribute (XElement el, string key, string value)
-		{
-			int line = el.Region.EndLine;
-			int column = 1;
-			string preambula = string.Empty;
-			string ending = string.Empty;
-
-			if (el.IsSelfClosing) {
-				column = el.Region.EndColumn - 2; // "/>"
-				ending = " ";
-			} else {
-				column = el.Region.EndColumn -1; // ">"
-			}
-
-			if (column > 1) {
-				string whatsBeforeUs = textEditor.GetTextBetween (line, column - 1, line, column);
-				if (!string.IsNullOrWhiteSpace (whatsBeforeUs))
-					preambula = " ";
-			}
-			Gtk.Application.Invoke (delegate {
-				textEditor.SetCaretTo (line, column);
-				textEditor.InsertAtCaret (string.Format ("{0}{1}=\"{2}\"{3}", preambula, key, value, ending));
-			});
-
-			txtDocDirty = true;
-		}
-
-		void UpdateAttribute (XAttribute attr, string newValue)
+		public void ReplaceText (DomRegion region, string newValue)
 		{
 			Gtk.Application.Invoke (delegate {
-				textEditor.Remove (attr.Region);
-				textEditor.SetCaretTo (attr.Region.BeginLine, attr.Region.BeginColumn);
-				textEditor.InsertAtCaret (String.Format ("{0}=\"{1}\"", attr.Name.Name, newValue));
+				textEditor.Remove (region);
+				textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
+				textEditor.InsertAtCaret (newValue);
+
+				TxtDocDirty = true;
 			});
-			txtDocDirty = true;
 		}
 
-		public void UpdateTag (IComponent component, MemberDescriptor memberDesc, object newVal)
+		public void RemoveText (DomRegion region)
 		{
-			string key = String.Empty;
-			string value = String.Empty;
-			AspNetParsedDocument doc = Parse ();
-			XElement el = GetControlTag (doc.XDocument.RootElement, component.Site.Name);
+			Gtk.Application.Invoke (delegate {
+				textEditor.Remove (region);
 
-			if (memberDesc is PropertyDescriptor) {
-				var propDesc = memberDesc as PropertyDescriptor;
-				key = memberDesc.Name;
-				value = propDesc.Converter.ConvertToString (newVal);
-			} else if (memberDesc is EventDescriptor) {
-				//var eventDesc = memberDesc as EventDescriptor;
-				//key = "On" + eventDesc.Name;
-				// TODO: get the handler method name
-				//value = newVal.ToString ();
-			} else {
-				// well, well, well! what do we have here!
-			}
-
-			bool found = false;
-
-			// check if the changed attribute was already in the tag 
-			foreach (XAttribute attr in el.Attributes) {
-				if (attr.Name.Name.ToLower () == key.ToLower ()) {
-					UpdateAttribute (attr, value);
-					found = true;
-					break;
-				}
-			}
-
-			// if it was not in the tag, add it
-			if (!found) {
-				InsertAttribute (el, key, value);
-			}
-
-			txtDocDirty = true;
-			PersistDocument ();
+				TxtDocDirty = true;
+			});
 		}
 
-		XElement GetControlTag (XElement container, string id)
+		public void InsertText (TextLocation loc, string text)
 		{
-			XElement controlTag = null;
-			foreach (XNode node in container.Nodes) {
-				if (controlTag != null) {
-					break;
-				}
-				if (node is XElement) {
-					XElement el = node as XElement;
-					string currId = GetAttributeValueCI (el.Attributes, "id");
-					if (IsRunAtServer (el) && (string.Compare(currId, id, true) == 0)) {
-						controlTag = el;
-						break;
-					}
-					controlTag = GetControlTag (el, id);
-				} 
-			}
-			return controlTag;
+			Gtk.Application.Invoke (delegate {
+				textEditor.SetCaretTo (loc.Line, loc.Column);
+				textEditor.InsertAtCaret (text);
+
+				TxtDocDirty = true;
+			});
 		}
+
 
 		#endregion
 		
 		#region Designer communication
-
-		public string ToDesignTimeHtml ()
-		{
-			// serialize everything insed the <html> tag
-			return designableHtml;
-		}
 
 		public event EventHandler Changing;
 		public event EventHandler Changed;
@@ -374,16 +295,17 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		#endregion
 
-		#region Serialization
-
-
-
 		public string GetTextFromEditor (TextLocation start, TextLocation end)
+		{
+			return GetTextFromEditor (start.Line, start.Column, end.Line, end.Column);
+		}
+
+		public string GetTextFromEditor (int startLine, int startColumn, int endLine, int endColumn)
 		{
 			if (textEditor == null)
 				throw new NullReferenceException ("The SourceEditorView is not set. Can't process document for text nodes.");
 
-			return textEditor.GetTextBetween (start.Line, start.Column, end.Line, end.Column);
+			return textEditor.GetTextBetween (startLine, startColumn, endLine, endColumn);
 		}
 
 		private IComponent ProcessControl (XElement element)
@@ -501,16 +423,6 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
-		bool IsRunAtServer (XElement el)
-		{
-			XName runat = new XName ("runat");
-			foreach (XAttribute a  in el.Attributes) {
-				if ((a.Name.ToLower () == runat) && (a.Value.ToLower () == "server"))
-					return true;
-			}
-			return false;
-		}
-
 		//static string[] htmlControlTags = {"a", "button", "input", "img", "select", "textarea"};
 		static Dictionary<string, Type> htmlControlTags = new Dictionary<string, Type> () {
 			{"a", typeof (HtmlAnchor)},
@@ -530,7 +442,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			Type compType = htmlControlTags[nameLowered];
 			// we have an input tag
 			if (compType == null) {
-				string typeAttr = GetAttributeValueCI (el.Attributes, "type");
+				string typeAttr = XDocumentHelper.GetAttributeValueCI (el.Attributes, "type");
 				switch (typeAttr.ToLower ()) {
 				case "button":
 					compType = typeof (HtmlInputButton);
@@ -567,22 +479,6 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			return compType;
 		}
-
-		/// <summary>
-		/// Gets the attribute value. case insensitive
-		/// </summary>
-		string GetAttributeValueCI (XAttributeCollection attributes, string key)
-		{
-			XName nameKey = new XName (key.ToLowerInvariant ());
-
-			foreach (XAttribute attr in attributes) {
-				if (attr.Name.ToLower () == nameKey)
-					return attr.Value;
-			}
-			return string.Empty;
-		}
-
-		#endregion
 		
 		//we need this to invoke protected member before rendering
 		private static MethodInfo onPreRenderMethodInfo;
@@ -763,5 +659,10 @@ namespace AspNetEdit.Editor.ComponentModel
 
 
 		#endregion
+
+		public void Destroy ()
+		{
+			updateEditorContent.Dispose ();
+		}
 	}
 }
