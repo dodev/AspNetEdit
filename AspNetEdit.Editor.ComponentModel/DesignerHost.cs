@@ -48,8 +48,9 @@ namespace AspNetEdit.Editor.ComponentModel
 	public class DesignerHost : IDesignerHost, IDisposable
 	{
 		private ServiceContainer parentServices;
+		EditorHost editorHost;
 
-		public DesignerHost (ServiceContainer parentServices)
+		public DesignerHost (ServiceContainer parentServices, EditorHost host)
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
@@ -58,6 +59,8 @@ namespace AspNetEdit.Editor.ComponentModel
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
 			parentServices.AddService (typeof (IComponentChangeService), container);
+
+			editorHost = host;
 		}
 
 		#region Component management
@@ -351,18 +354,12 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			this.Container.Add (new WebFormPage());
 			this.rootDocument = new Document ((Control)rootComponent, this, txtEditor);
+			rootDocument.Changed += new EventHandler (Document_OnChanged);
 			serializer = new DocumentSerializer (this);
 			designerSerializer = new DesignerSerializer (this);
-			rootDocument.Changed += new EventHandler (Document_OnChanged);
 
 			loading = false;
 			OnLoadComplete ();
-		}
-		
-		public string GetDesignableHtml ()
-		{
-			string html = serializer.GetDesignableHtml ();
-			return html;
 		}
 
 		public void Reset ()
@@ -377,7 +374,29 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
-		#endregion 
+		#endregion
+
+		public void RootDesignerView_Realized (object o, EventArgs args)
+		{
+			System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(InitialSerialization));
+			serializerThread.Start ();
+		}
+
+		public void InitialSerialization ()
+		{
+			// check the document for controls and directives
+			RootDocument.InitControlsAndDirectives ();
+
+			// init the designer context tags, and find the absolute path to the current project
+			var view = editorHost.DesignerView as AspNetEdit.Editor.UI.RootDesignerView;
+			view.InitProperties ();
+
+			// pass the freshly generated designer context to the html serializer
+			serializer.SetDesignerContext (view.DesignerContext);
+
+			// serialize the document for displaying in the designer
+			SerializeDocument ();
+		}
 
 		public void Document_OnChanged (object o, EventArgs args)
 		{
@@ -387,7 +406,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void SerializeDocument ()
 		{
-			string html = serializer.GetDesignableHtml ();
+   			string html = serializer.GetDesignableHtml ();
 
 			// fire the event
 			OnDocumentChanged (html);

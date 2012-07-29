@@ -53,7 +53,13 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			host = hst;
 			document = host.RootDocument;
-			designerContext = ((host.GetDesigner (host.RootComponent) as RootDesigner).GetView (ViewTechnology.Default) as RootDesignerView).DesignerContext;
+			designerContext = String.Empty;
+			//designerContext = ((host.GetDesigner (host.RootComponent) as RootDesigner).GetView (ViewTechnology.Default) as RootDesignerView).DesignerContext;
+		}
+
+		public void SetDesignerContext (string desCtx)
+		{
+			designerContext = desCtx;
 		}
 
 		public string GetDesignableHtml ()

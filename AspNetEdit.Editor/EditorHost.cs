@@ -83,7 +83,7 @@ namespace AspNetEdit.Editor
 			);
 			
 			System.Diagnostics.Trace.WriteLine ("Creating DesignerHost");
-			designerHost = new DesignerHost (services);
+			designerHost = new DesignerHost (services, this);
 			System.Diagnostics.Trace.WriteLine ("Created DesignerHost");
 			designerHost.DocumentChanged += new DesignerHost.DocumentChangedEventHandler (OnDocumentChanged);
 		}
@@ -111,7 +111,7 @@ namespace AspNetEdit.Editor
 			designerView.Realized += delegate {
 				System.Diagnostics.Trace.WriteLine ("Designer view realized");
 			};
-			designerView.Realized += new EventHandler (designerHost.Document_OnChanged);
+			designerView.Realized += new EventHandler (designerHost.RootDesignerView_Realized);
 		}
 		
 		public Gtk.Widget DesignerView {

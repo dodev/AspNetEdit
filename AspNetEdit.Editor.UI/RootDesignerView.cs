@@ -74,6 +74,16 @@ namespace AspNetEdit.Editor.UI
 			if (this.host == null)
 				throw new ArgumentNullException ("host");
 
+			baseUri = String.Empty;
+			designerContext = String.Empty;
+			msgManager = new DesignerMessageManager (host as DesignerHost);
+
+			// subscribe to messages from the designer surface
+			this.TitleChanged += new TitleChangedHandler (WebView_OnTitleChanged);
+		}
+
+		public void InitProperties ()
+		{
 			// setting the baseUri to the project's root
 			// it will enable the WebView to load user's css files and images with relative URIs
 			string projectDir = System.IO.Path.GetDirectoryName (MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.Project.FileName.ToString ());
@@ -112,9 +122,6 @@ namespace AspNetEdit.Editor.UI
 			sb.AppendLine ();
 
 			designerContext = sb.ToString ();
-
-			msgManager = new DesignerMessageManager (host as DesignerHost);
-			this.TitleChanged += new TitleChangedHandler (WebView_OnTitleChanged);
 		}
 
 		public string DesignerContext {

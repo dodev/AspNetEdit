@@ -69,9 +69,10 @@ namespace AspNetEdit.Editor.ComponentModel
 		ExtensibleTextEditor textEditor;
 		// notes when the content of the textEditor doesn't match the content of the XDocument
 		bool txtDocDirty;
-		// was the initial parse of the controls performed
-		bool controlsInitialized;
+		// do not serialize the document to HTML
+		bool suppressSerialization;
 
+		// blocks threads from parsing the document when it been edited
 		ManualResetEvent updateEditorContent;
 		
 		///<summary>Creates a new document</summary>
@@ -101,23 +102,32 @@ namespace AspNetEdit.Editor.ComponentModel
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
 			parser = new AspNetParser ();
-			directives = null;
+			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
 			aspNetDoc = null;
 			txtDocDirty = true;
-			controlsInitialized = false;
+			suppressSerialization = false;
 			updateEditorContent = new ManualResetEvent (true);
+		}
+
+		public void InitControlsAndDirectives ()
+		{
+			// check the document for directives
+			ParseDirectives ();
+
+			// check for controls and add them to the design container
+			ParseControls ();
 		}
 
 		#region StateEngine parser
 
 		bool TxtDocDirty {
 			set {
-				if (value) {
-					updateEditorContent.Set ();
-					OnChanged ();
-				}
-
 				txtDocDirty = value;
+
+				if (value) {
+					if (!suppressSerialization)
+						OnChanged ();
+				}
 			}
 			get { return txtDocDirty; }
 		}
@@ -132,17 +142,6 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (TxtDocDirty) {
 				aspNetDoc = Parse (textEditor.Text, textEditor.FileName);
 				TxtDocDirty = false;
-
-				// init the directives hashtable
-				if (directives == null) {
-					directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-					ParseDirectives ();
-				}
-				// init  the DesignerContainer's list of components
-				if (controlsInitialized == false) {
-					ParseControls ();
-					controlsInitialized = true;
-				}
 			}
 			return aspNetDoc;
 		}
@@ -172,6 +171,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		void ParseControls ()
 		{
+			// no need to serialize the document, if we add just an id attribute to a control
+			suppressSerialization = true;
+
 			// the method check for control may change the document
 			// so we parse the document each time it does
 			do {
@@ -192,18 +194,21 @@ namespace AspNetEdit.Editor.ComponentModel
 
 							if (comp == null)
 								continue;
+
+							this.host.Container.Add (comp, id);
 	
 							// add id to the component, for later recognition if it has not ID
 							if (String.IsNullOrEmpty(id)) {
 								host.AspNetSerializer.SetAttribtue (element, "id", comp.Site.Name);
+								updateEditorContent.WaitOne (); // wait until the changes have been applied to the document
 								break;
-							} else {
-								this.host.Container.Add (comp, id);
-							}
+							} 
 						}
 					}
 				}
 			} while (txtDocDirty);
+
+			suppressSerialization = false;
 		}
 
 		private IComponent ProcessControl (XElement element)
@@ -426,6 +431,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				// let the parser know that the content is dirty and set the event
 				TxtDocDirty = true;
+				updateEditorContent.Set ();
 			});
 		}
 
@@ -437,6 +443,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				textEditor.Remove (region);
 
 				TxtDocDirty = true;
+				updateEditorContent.Set ();
 			});
 		}
 
@@ -449,6 +456,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				textEditor.InsertAtCaret (text);
 
 				TxtDocDirty = true;
+				updateEditorContent.Set ();
 			});
 		}
 
