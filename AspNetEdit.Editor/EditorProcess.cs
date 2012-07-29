@@ -56,7 +56,7 @@ namespace AspNetEdit.Editor
 	public class EditorProcess : RemoteDesignerProcess
 	{
 		EditorHost host;
-		Frame webKitFrame;
+		ScrolledWindow webKitFrame;
 //		PropertyGrid propertyGrid;
 		
 		public EditorProcess () : base ()
@@ -103,9 +103,9 @@ namespace AspNetEdit.Editor
 		{
 			System.Diagnostics.Trace.WriteLine ("Building AspNetEdit GUI");
 			Gtk.VBox outerBox = new Gtk.VBox ();
-			
-			webKitFrame = new Frame ();
-			webKitFrame.Shadow = ShadowType.In;
+
+			webKitFrame = new ScrolledWindow ();
+			webKitFrame.BorderWidth = 1;
 			webKitFrame.Add (host.DesignerView);
 			outerBox.PackEnd (webKitFrame, true, true, 0);
 			
