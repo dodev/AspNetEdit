@@ -114,6 +114,7 @@ namespace AspNetEdit.Editor.UI
 			designerContext = sb.ToString ();
 
 			msgManager = new DesignerMessageManager (host as DesignerHost);
+			this.TitleChanged += new TitleChangedHandler (WebView_OnTitleChanged);
 		}
 
 		public string DesignerContext {

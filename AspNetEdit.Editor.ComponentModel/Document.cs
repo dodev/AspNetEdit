@@ -68,7 +68,9 @@ namespace AspNetEdit.Editor.ComponentModel
 		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
 		// notes when the content of the textEditor doesn't match the content of the XDocument
-		bool txtDocDirty; 
+		bool txtDocDirty;
+		// was the initial parse of the controls performed
+		bool controlsInitialized;
 
 		ManualResetEvent updateEditorContent;
 		
@@ -102,16 +104,16 @@ namespace AspNetEdit.Editor.ComponentModel
 			directives = null;
 			aspNetDoc = null;
 			txtDocDirty = true;
+			controlsInitialized = false;
 			updateEditorContent = new ManualResetEvent (true);
 		}
 
-		public bool TxtDocDirty {
+		bool TxtDocDirty {
 			set {
 				if (value) {
 					updateEditorContent.Set ();
 					OnChanged ();
-				} else
-					updateEditorContent.Reset ();
+				}
 
 				txtDocDirty = value;
 			}
@@ -161,9 +163,22 @@ namespace AspNetEdit.Editor.ComponentModel
 		/// </summary>
 		public AspNetParsedDocument Parse ()
 		{
-			if (txtDocDirty) {
+			// waiting if someone is about to change the contents of the document
+			updateEditorContent.WaitOne ();
+			if (TxtDocDirty) {
 				aspNetDoc = Parse (textEditor.Text, textEditor.FileName);
-				txtDocDirty = false;
+				TxtDocDirty = false;
+
+				// init the directives hashtable
+				if (directives == null) {
+					directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
+					CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
+				}
+				// init  the DesignerContainer's list of components
+				if (controlsInitialized == false) {
+					ParseControls ();
+					controlsInitialized = true;
+				}
 			}
 			return aspNetDoc;
 		}
@@ -245,17 +260,23 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void ReplaceText (DomRegion region, string newValue)
 		{
+			// do not parse the document until changes have been made to the text
+			updateEditorContent.Reset ();
+
 			Gtk.Application.Invoke (delegate {
 				textEditor.Remove (region);
 				textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
 				textEditor.InsertAtCaret (newValue);
 
+				// let the parser know that the content is dirty and set the event
 				TxtDocDirty = true;
 			});
 		}
 
 		public void RemoveText (DomRegion region)
 		{
+			updateEditorContent.Reset ();
+
 			Gtk.Application.Invoke (delegate {
 				textEditor.Remove (region);
 
@@ -265,6 +286,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void InsertText (TextLocation loc, string text)
 		{
+			updateEditorContent.Reset ();
+
 			Gtk.Application.Invoke (delegate {
 				textEditor.SetCaretTo (loc.Line, loc.Column);
 				textEditor.InsertAtCaret (text);

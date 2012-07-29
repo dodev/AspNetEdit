@@ -2,6 +2,7 @@
 function SelectionManager () {
 	var selectedIds = [];
 	var primarySelection = -1;
+	var instance = this;
 	
 	this.Initialize = function () {
 		var selectable = JSON.parse (jQuery ("#" + initParams.selectable).html ());
@@ -18,22 +19,23 @@ function SelectionManager () {
 			marker.bind ("mousedown", control_onMouseDown);
 			jQuery ("body").append (marker);
 		}
-		
+		// place the markers above the controls
 		this.PositionMarkers ();
 		
+		// show the selected items
 		for (var id in selected) {
 			this.Select (selected[id]);
 		}
 		
-		$(window).resize (PositionMarkers);
+		// if the window is resized re-position the markers
+		$(window).resize (this.PositionMarkers);
 	};
 	
 	this.PositionMarkers = function () {
-		var selectMan = this;
 		jQuery ("." + noConflict.marker).each (function () {
-			var id = selectMan.ExtractControlId (this.id);
+			var id = instance.ExtractControlId (this.id);
 			var el = jQuery ("#" + id);
-			var offset = selectMan.GetCoordinates (el.get (0));
+			var offset = instance.GetCoordinates (el.get (0));
 			offset.top -= markerConfig.padding + markerConfig.borderWidth;
 			offset.left -= markerConfig.padding + markerConfig.borderWidth;
 			//jQuery(this).offset (offset); //weird bug in .offset () prevent me from using it

@@ -241,7 +241,6 @@
   <ItemGroup>
     <Folder Include="designer_context\" />
     <Folder Include="AspNetEdit.Tools\" />
-    <Folder Include="AspNetEdit.Editor.JsCommunication\" />
     <Folder Include="AspNetEdit.Editor.DesignerLink\" />
   </ItemGroup>
 </Project>
