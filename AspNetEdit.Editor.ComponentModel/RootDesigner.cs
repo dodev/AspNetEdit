@@ -58,7 +58,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public ViewTechnology[] SupportedTechnologies {
 			get {
-				ViewTechnology[] tech = { ViewTechnology.Passthrough };
+				ViewTechnology[] tech = { ViewTechnology.Default };
 				return tech;
 			}
 		}

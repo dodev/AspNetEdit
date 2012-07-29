@@ -108,6 +108,8 @@ namespace AspNetEdit.Editor.ComponentModel
 			updateEditorContent = new ManualResetEvent (true);
 		}
 
+		#region StateEngine parser
+
 		bool TxtDocDirty {
 			set {
 				if (value) {
@@ -119,44 +121,6 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 			get { return txtDocDirty; }
 		}
-
-//		public void PersistDocument ()
-//		{
-//			System.Threading.Thread worker = new System.Threading.Thread (new System.Threading.ThreadStart(StartPersistingDocument));
-//			worker.Start ();
-//		}
-//
-//		public void StartPersistingDocument ()
-//		{
-//			OnChanging ();
-//			try {
-//				// wait until the there have been made changes to the editor
-//				updateEditorContent.WaitOne ();
-//
-//				// parse the contents of the textEditor
-//				Parse ();
-//	
-//				// initializing the dicts of directives and controls tags
-//				if (directives == null) {
-//					directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-//					CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
-//					ParseControls ();
-//				}
-//	
-//				// serialize the tree to designable HTML
-//				//designableHtml = serializeNode (aspNetDoc.XDocument.RootElement);
-//			} catch (Exception ex) {
-//				System.Diagnostics.Trace.WriteLine (ex.ToString ());
-//			} finally {
-//				// set the event to not signaled
-//				updateEditorContent.Reset ();
-//			}
-//
-//			OnChanged ();
-//		}
-
-
-		#region StateEngine parser
 
 		/// <summary>
 		/// Parse the TextEditor.Text document and tracks the txtDocDirty flag.
@@ -172,7 +136,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				// init the directives hashtable
 				if (directives == null) {
 					directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-					CheckForDirective (aspNetDoc.XDocument.AllDescendentNodes);
+					ParseDirectives ();
 				}
 				// init  the DesignerContainer's list of components
 				if (controlsInitialized == false) {
@@ -192,14 +156,11 @@ namespace AspNetEdit.Editor.ComponentModel
 			return parsedDoc;
 		}
 
-		void CheckForDirective (IEnumerable<XNode> nodes)
+		void ParseDirectives ()
 		{
-			foreach (XNode node in nodes) {
-				if (node is XContainer) {
-					var container = node as XContainer;
-					CheckForDirective (container.AllDescendentNodes);
-	
-				} else if (node is AspNetDirective) {
+			var doc = Parse ();
+			foreach (XNode node in doc.XDocument.AllDescendentNodes) {
+				if (node is AspNetDirective) {
 					var directive = node as AspNetDirective;
 					var properties = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
 					foreach (XAttribute attr in directive.Attributes)
@@ -215,120 +176,34 @@ namespace AspNetEdit.Editor.ComponentModel
 			// so we parse the document each time it does
 			do {
 				var doc = Parse ();
-				CheckForControl (doc.XDocument.RootElement);
-			} while (txtDocDirty);
-		}
 
-		void CheckForControl (XNode node)
-		{
-			if (!(node is XElement))
-				return;
+				foreach (XNode node in doc.XDocument.RootElement.AllDescendentElements) {
+					if (!(node is XElement))
+						continue;
+		
+					var element = node as XElement;
+		
+					if (element.Name.HasPrefix || XDocumentHelper.IsRunAtServer (element)) {
+						string id = XDocumentHelper.GetAttributeValueCI (element.Attributes, "id");
+		
+						// check the DesignContainer if a component for that node already exists
+						if (host.GetComponent(id) == null) {
+							IComponent comp = ProcessControl (element);
 
-			var element = node as XElement;
-
-			if (element.Name.HasPrefix || XDocumentHelper.IsRunAtServer (element)) {
-				string id = XDocumentHelper.GetAttributeValueCI (element.Attributes, "id");
-
-				try {
-					// check the DesignContainer if a component for that node already exists
-					if (string.IsNullOrEmpty(id) || (host.GetComponent(id) == null)) {
-						IComponent comp = ProcessControl (element);
-						if (comp != null) {
-							this.host.Container.Add (comp, id);
+							if (comp == null)
+								continue;
 	
-							// add id to the component, for later recognition
-							if (id == string.Empty) {
+							// add id to the component, for later recognition if it has not ID
+							if (String.IsNullOrEmpty(id)) {
 								host.AspNetSerializer.SetAttribtue (element, "id", comp.Site.Name);
-								return;
+								break;
+							} else {
+								this.host.Container.Add (comp, id);
 							}
 						}
 					}
-
-				} catch (Exception ex) {
-					System.Diagnostics.Trace.WriteLine (ex.ToString ());
 				}
-			}
-
-			foreach (XNode nd in element.Nodes) {
-				if (txtDocDirty)
-					return;
-
-				CheckForControl (nd);
-			}
-				
-		}
-
-		public void ReplaceText (DomRegion region, string newValue)
-		{
-			// do not parse the document until changes have been made to the text
-			updateEditorContent.Reset ();
-
-			Gtk.Application.Invoke (delegate {
-				textEditor.Remove (region);
-				textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
-				textEditor.InsertAtCaret (newValue);
-
-				// let the parser know that the content is dirty and set the event
-				TxtDocDirty = true;
-			});
-		}
-
-		public void RemoveText (DomRegion region)
-		{
-			updateEditorContent.Reset ();
-
-			Gtk.Application.Invoke (delegate {
-				textEditor.Remove (region);
-
-				TxtDocDirty = true;
-			});
-		}
-
-		public void InsertText (TextLocation loc, string text)
-		{
-			updateEditorContent.Reset ();
-
-			Gtk.Application.Invoke (delegate {
-				textEditor.SetCaretTo (loc.Line, loc.Column);
-				textEditor.InsertAtCaret (text);
-
-				TxtDocDirty = true;
-			});
-		}
-
-
-		#endregion
-		
-		#region Designer communication
-
-		public event EventHandler Changing;
-		public event EventHandler Changed;
-
-		public void OnChanged ()
-		{
-			if (Changed != null)
-				Changed (this, EventArgs.Empty);
-		}
-
-		public void OnChanging ()
-		{
-			if (Changing != null)
-				Changing (this, EventArgs.Empty);
-		}
-
-		#endregion
-
-		public string GetTextFromEditor (TextLocation start, TextLocation end)
-		{
-			return GetTextFromEditor (start.Line, start.Column, end.Line, end.Column);
-		}
-
-		public string GetTextFromEditor (int startLine, int startColumn, int endLine, int endColumn)
-		{
-			if (textEditor == null)
-				throw new NullReferenceException ("The SourceEditorView is not set. Can't process document for text nodes.");
-
-			return textEditor.GetTextBetween (startLine, startColumn, endLine, endColumn);
+			} while (txtDocDirty);
 		}
 
 		private IComponent ProcessControl (XElement element)
@@ -502,7 +377,83 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			return compType;
 		}
+
+		#endregion
 		
+		#region Designer communication
+
+		public event EventHandler Changing;
+		public event EventHandler Changed;
+
+		public void OnChanged ()
+		{
+			if (Changed != null)
+				Changed (this, EventArgs.Empty);
+		}
+
+		public void OnChanging ()
+		{
+			if (Changing != null)
+				Changing (this, EventArgs.Empty);
+		}
+
+		#endregion
+
+		#region TextEditor manipulation
+
+		public string GetTextFromEditor (TextLocation start, TextLocation end)
+		{
+			return GetTextFromEditor (start.Line, start.Column, end.Line, end.Column);
+		}
+
+		public string GetTextFromEditor (int startLine, int startColumn, int endLine, int endColumn)
+		{
+			if (textEditor == null)
+				throw new NullReferenceException ("The SourceEditorView is not set. Can't process document for text nodes.");
+
+			return textEditor.GetTextBetween (startLine, startColumn, endLine, endColumn);
+		}
+
+		public void ReplaceText (DomRegion region, string newValue)
+		{
+			// do not parse the document until changes have been made to the text
+			updateEditorContent.Reset ();
+
+			Gtk.Application.Invoke (delegate {
+				textEditor.Remove (region);
+				textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
+				textEditor.InsertAtCaret (newValue);
+
+				// let the parser know that the content is dirty and set the event
+				TxtDocDirty = true;
+			});
+		}
+
+		public void RemoveText (DomRegion region)
+		{
+			updateEditorContent.Reset ();
+
+			Gtk.Application.Invoke (delegate {
+				textEditor.Remove (region);
+
+				TxtDocDirty = true;
+			});
+		}
+
+		public void InsertText (TextLocation loc, string text)
+		{
+			updateEditorContent.Reset ();
+
+			Gtk.Application.Invoke (delegate {
+				textEditor.SetCaretTo (loc.Line, loc.Column);
+				textEditor.InsertAtCaret (text);
+
+				TxtDocDirty = true;
+			});
+		}
+
+		#endregion
+
 		//we need this to invoke protected member before rendering
 		private static MethodInfo onPreRenderMethodInfo;
 		
@@ -557,8 +508,8 @@ namespace AspNetEdit.Editor.ComponentModel
 				
 		public void InsertFragment (string fragment)
 		{
-			Control[] controls;
-			string doc;
+//			Control[] controls;
+//			string doc;
 			//aspParser.ProcessFragment (fragment, out controls, out doc);
 			//view.InsertFragment (doc);
 			
@@ -679,7 +630,6 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			return null;
 		}
-
 
 		#endregion
 

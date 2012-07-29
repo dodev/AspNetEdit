@@ -126,7 +126,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		public void SetSelectedComponents(System.Collections.ICollection components, SelectionTypes selectionType)
 		{
 			//TODO: Use .NET 2.0 SelectionTypes Primary, Add, Replace, Remove, Toggle
-			if ((selectionType & SelectionTypes.Valid) == SelectionTypes.Valid)
+			//if ((selectionType & SelectionTypes.Valid) == SelectionTypes.Valid)
 				SetSelectedComponents(components);
 		}
 
