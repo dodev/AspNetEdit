@@ -98,17 +98,31 @@ namespace AspNetEdit.Editor.ComponentModel
 				UpdateAttribute (attr, value);
 		}
 
+		public void RemoveAttribute (XElement el, string key)
+		{
+			document.RemoveText (
+				XDocumentHelper.GetAttributeCI (el.Attributes, key).Region
+			);
+		}
+
 		public void UpdateTag (IComponent component, MemberDescriptor memberDesc, object newVal)
 		{
 			string key = String.Empty;
 			string value = String.Empty;
+			bool removeOnly = false;
 			AspNetParsedDocument doc = host.RootDocument.Parse ();
 			XElement el = GetControlTag (doc.XDocument.RootElement, component.Site.Name);
 
 			if (memberDesc is PropertyDescriptor) {
 				var propDesc = memberDesc as PropertyDescriptor;
-				key = memberDesc.Name;
-				value = propDesc.Converter.ConvertToString (newVal);
+				// check if the value is the default for the property of the component
+				// remove the attribute if it's the default
+				if (propDesc.Attributes.Contains (new DefaultValueAttribute (newVal))) {
+					removeOnly = true;
+				} else {
+					key = memberDesc.Name;
+					value = propDesc.Converter.ConvertToString (newVal);
+				}
 			} else if (memberDesc is EventDescriptor) {
 				//var eventDesc = memberDesc as EventDescriptor;
 				//key = "On" + eventDesc.Name;
@@ -118,21 +132,10 @@ namespace AspNetEdit.Editor.ComponentModel
 				// well, well, well! what do we have here!
 			}
 
-			bool found = false;
-
-			// check if the changed attribute was already in the tag 
-			foreach (XAttribute attr in el.Attributes) {
-				if (attr.Name.Name.ToLower () == key.ToLower ()) {
-					UpdateAttribute (attr, value);
-					found = true;
-					break;
-				}
-			}
-
-			// if it was not in the tag, add it
-			if (!found) {
-				InsertAttribute (el, key, value);
-			}
+			if (removeOnly)
+				RemoveAttribute (el, memberDesc.Name);
+			else
+				SetAttribtue (el, key, value);
 		}
 
 		XElement GetControlTag (XElement container, string id)
