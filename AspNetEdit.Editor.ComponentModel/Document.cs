@@ -196,6 +196,7 @@ namespace AspNetEdit.Editor.ComponentModel
 								continue;
 
 							this.host.Container.Add (comp, id);
+							ProcessControlProperties (element, comp);
 	
 							// add id to the component, for later recognition if it has not ID
 							if (String.IsNullOrEmpty(id)) {
@@ -232,8 +233,11 @@ namespace AspNetEdit.Editor.ComponentModel
 				return null;
 				//throw new Exception ("Could not determine the control type for element " + element.FriendlyPathRepresentation);
 
-			IComponent component = Activator.CreateInstance (controlType) as IComponent;
+			return Activator.CreateInstance (controlType) as IComponent;
+		}
 
+		private IComponent ProcessControlProperties (XElement element, IComponent component)
+		{
 			if (component is ListControl)
 				ParseListItems (component as ListControl, element);
 
@@ -245,28 +249,53 @@ namespace AspNetEdit.Editor.ComponentModel
 			// Since we have no Designers the TypeDescriptorsFilteringService won't work :(
 			// looking for properties and events declared as attributes of the server control node
 			Attribute[] filter = new Attribute[] { BrowsableAttribute.Yes};
-			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (controlType, filter);
+			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (component.GetType (), filter);
 			PropertyDescriptor desc = null;
-//			EventDescriptorCollection eCollection = TypeDescriptor.GetEvents (controlType, filter);
-//			EventDescriptor evDesc = null;
+			EventDescriptorCollection eCollection = TypeDescriptor.GetEvents (component.GetType (), filter);
+			EventDescriptor evDesc = null;
 
 			foreach (XAttribute attr in element.Attributes) {
 				desc = pCollection.Find (attr.Name.Name, true);
-				if ((desc != null) && !desc.IsReadOnly) {
-					var converter = TypeDescriptor.GetConverter (desc.PropertyType) as TypeConverter;
-					if (converter != null) {
-						desc.SetValue (component, converter.ConvertFromString (attr.Value));
-					} else {
-						throw new NotSupportedException ("No TypeConverter found for property of type " + desc.PropertyType.Name);
-					}
-				} //else if (attr.Name.Name.Contains ("On")) {
-					// TODO: filter events for the component  !?
+//				if ((desc != null) && !desc.IsReadOnly) {
+//					var converter = TypeDescriptor.GetConverter (desc.PropertyType) as TypeConverter;
+//					if (converter != null) {
+//						desc.SetValue (component, converter.ConvertFromString (attr.Value));
+//					} else {
+//						throw new NotSupportedException ("No TypeConverter found for property of type " + desc.PropertyType.Name);
+//					}
+//				} else if (CultureInfo.InvariantCulture.CompareInfo.IsPrefix (attr.Name.Name.ToLower (), "on")) {
+//					// TODO: filter events for the component  !?
+//					IEventBindingService iebs = (IEventBindingService) host.GetService (typeof (IEventBindingService));
+//					if (iebs == null)
+//						throw new Exception ("Could not obtain IEventBindingService from host");
+//
 //					string eventName = attr.Name.Name.Replace ("On", string.Empty);
 //					evDesc = eCollection.Find (eventName, true);
 //					if (evDesc != null) {
-//
+//						desc = iebs.GetEventProperty(evDesc);
 //					}
 //				}
+				// if we have an event attribute
+				if (desc == null && CultureInfo.InvariantCulture.CompareInfo.IsPrefix (attr.Name.Name.ToLower (), "on")) {
+					IEventBindingService iebs = host.GetService (typeof (IEventBindingService)) as IEventBindingService;
+					if (iebs == null)
+						throw new Exception ("Could not obtain IEventBindingService from host");
+
+					string eventName = attr.Name.Name.Remove (0, 2);
+					evDesc = eCollection.Find (eventName, true);
+
+					if (evDesc != null)
+						desc = iebs.GetEventProperty (evDesc);
+				}
+
+				if (desc == null)
+					continue;
+					//throw new Exception ("Could not find property " + attr.Name.Name + " of type " + component.GetType ().ToString ());
+
+				if (desc.IsReadOnly)
+					continue;
+
+				desc.SetValue (component, desc.Converter.ConvertFromString (attr.Value));
 			}
 
 			return component;

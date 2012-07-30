@@ -54,7 +54,6 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
-			container.ComponentChanged += new ComponentChangedEventHandler (OnComponentUpdated);
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
@@ -127,13 +126,6 @@ namespace AspNetEdit.Editor.ComponentModel
 		public IComponent GetComponent (string name)
 		{
 			return container.GetComponent (name);
-		}
-
-		public void OnComponentUpdated (object o, ComponentChangedEventArgs args)
-		{
-			// FIXME: a bug in ComponentChangedEventArgs - switches the return value of NewValue and OldValue
-			//this.RootDocument.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
-			designerSerializer.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
 		}
 
 		public void DestroyComponent (IComponent component)
@@ -396,6 +388,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			// serialize the document for displaying in the designer
 			SerializeDocument ();
+
+			// subscribe to changes in the component container
+			container.ComponentChanged += new ComponentChangedEventHandler (OnComponentUpdated);
 		}
 
 		public void Document_OnChanged (object o, EventArgs args)
@@ -434,6 +429,13 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			if (DocumentChanged != null)
 				DocumentChanged (new DocumentChangedEventArgs (newHtml));
+		}
+
+		public void OnComponentUpdated (object o, ComponentChangedEventArgs args)
+		{
+			// FIXME: a bug in ComponentChangedEventArgs - switches the return value of NewValue and OldValue
+			if (activated)
+				designerSerializer.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
 		}
 
 		#region Wrapping parent ServiceContainer
