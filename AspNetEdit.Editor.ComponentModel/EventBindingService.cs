@@ -62,10 +62,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public System.Collections.ICollection GetCompatibleMethods (System.ComponentModel.EventDescriptor e)
 		{
-			MethodInfo mi = e.EventType.GetMethod ("Invoke");			
-			CodeMemberMethod methodSignature = MonoDevelop.DesignerSupport.BindingService.ReflectionToCodeDomMethod (mi);
+			MethodInfo mi = e.EventType.GetMethod ("Invoke");
 			
-			return proxy.GetCompatibleMethodsInCodeBehind (methodSignature);
+			return proxy.GetCompatibleMethodsInCodeBehind (mi);
 		}
 
 		public System.ComponentModel.EventDescriptor GetEvent (System.ComponentModel.PropertyDescriptor property)

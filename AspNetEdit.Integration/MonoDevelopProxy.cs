@@ -33,6 +33,7 @@
 using System;
 using System.CodeDom;
 using System.Collections.Generic;
+using System.Reflection;
 
 using MonoDevelop.Ide;
 using MonoDevelop.Ide.TypeSystem;
@@ -40,6 +41,7 @@ using MonoDevelop.Core;
 using MonoDevelop.Projects;
 using MonoDevelop.DesignerSupport;
 using ICSharpCode.NRefactory.TypeSystem;
+using ICSharpCode.NRefactory.TypeSystem.Implementation;
 
 namespace AspNetEdit.Integration
 {
@@ -54,10 +56,13 @@ namespace AspNetEdit.Integration
 		{
 			this.project = project;
 			
-			if (className != null)
-				fullClass = System.Type.GetType (className).ToTypeReference ().Resolve (
-					TypeSystemService.GetProjectContext (project).CreateCompilation ()
-				);
+			if (className != null) {
+				ICompilation compilation = TypeSystemService.GetProjectContext (project).CreateCompilation ();
+				foreach (ITypeDefinition itd in compilation.MainAssembly.TopLevelTypeDefinitions) {
+					if (itd.FullName == className)
+						fullClass = itd as IType;
+				}
+			}				
 			else
 				fullClass = null;
 			
@@ -106,16 +111,57 @@ namespace AspNetEdit.Integration
 		}
 		
 		
-		public string[] GetCompatibleMethodsInCodeBehind (CodeMemberMethod method)
+		public string[] GetCompatibleMethodsInCodeBehind (MethodInfo methodInfo)
 		{
 			if (fullClass == null)
 				return new string[0];
-			
-			IMethod MDMeth = (IMethod)BindingService.CodeDomToMDDomMethod (method); // IUnresolvedMethod to IMethod ??
-			if (MDMeth == null)
-				return null;
-			
-			List<IMethod> compatMeth = new List<IMethod> (BindingService.GetCompatibleMethodsInClass (fullClass, MDMeth));
+
+			ParameterInfo[] reflectionParams = methodInfo.GetParameters ();
+			List<IMethod> compatMeth = new List<IMethod> ();
+			IType[] pars = new IType[reflectionParams.Length];
+			List<IType>[] baseTypes = new List<IType>[reflectionParams.Length];
+			ICompilation compilation = TypeSystemService.GetCompilation (IdeApp.Workbench.ActiveDocument.Project);
+
+			for (int i = 0; i < reflectionParams.Length; i++) {
+				pars[i] = reflectionParams[i].ParameterType.ToTypeReference ().Resolve (compilation);
+				baseTypes[i] = new List<IType> (pars[i].GetAllBaseTypes ());
+			}
+
+			var matchMethType = methodInfo.ReturnType.ToTypeReference ().Resolve (compilation);
+
+			foreach (IMethod mmethod in fullClass.GetMethods (null, null,GetMemberOptions.IgnoreInheritedMembers)) {
+				if (mmethod.IsPrivate || mmethod.Parameters.Count != pars.Length || mmethod.IsInternal)
+					continue;
+
+				if (mmethod.ReturnType.FullName != matchMethType.FullName)
+					continue;
+
+				bool allCompatible = true;
+				
+				//compare each parameter
+				for (int i = 0; i < pars.Length; i++) {
+					if (pars[i].FullName != mmethod.Parameters[i].Type.FullName) {
+						allCompatible = false;
+						break;
+					}
+
+					List<IType> insideBTypes = new List<IType> (mmethod.Parameters[i].Type.GetAllBaseTypes ());
+					if (insideBTypes.Count != baseTypes[i].Count) {
+						allCompatible = false;
+						break;
+					}
+					for (int j = 0; j < baseTypes[i].Count; j++) {
+						if (baseTypes[i][j].FullName != insideBTypes[j].FullName) {
+							allCompatible = false;
+							break;
+						}
+					}
+				}
+				
+				if (allCompatible)
+					compatMeth.Add (mmethod);
+			}
+
 			string[] names = new string[compatMeth.Count];
 			for (int i = 0; i < names.Length; i++)
 				names[i] = compatMeth[i].Name;
@@ -149,7 +195,7 @@ namespace AspNetEdit.Integration
 			
 			return true;
 		}
-		
+
 		#endregion event binding
 	}
 }

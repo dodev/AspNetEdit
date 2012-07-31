@@ -161,20 +161,15 @@ namespace AspNetEdit.Integration
 			AspNetParsedDocument doc = null;
 			
 			//hook up proxy for event binding
-			string codeBehind = null;
+			//string codeBehind = null;
 			if (viewContent.Project != null) {
 				using (StringReader reader = new StringReader (srcEditor.Text)) {
 					AspNetParser parser = new AspNetParser ();
 					doc = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
 						as AspNetParsedDocument;
-					
-					if (doc != null && doc.Info != null) {
-						if (string.IsNullOrEmpty (doc.Info.InheritedClass))
-							codeBehind = doc.Info.InheritedClass;
-					}
 				}
 			}
-			proxy = new MonoDevelopProxy (viewContent.Project, codeBehind);
+			proxy = new MonoDevelopProxy (viewContent.Project, doc.Info.InheritedClass);
 			
 			editorProcess.Initialise (proxy, srcEditor.TextEditor, doc);
 			
