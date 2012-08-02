@@ -118,7 +118,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			ParseControls ();
 		}
 
-		#region StateEngine parser
+		#region Event firing control
 
 		bool TxtDocDirty {
 			set {
@@ -131,6 +131,22 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 			get { return txtDocDirty; }
 		}
+
+		public void WaitForChanges ()
+		{
+			suppressSerialization = true;
+		}
+
+		public void CommitChanges ()
+		{
+			updateEditorContent.WaitOne ();
+			suppressSerialization = false;
+			OnChanged ();
+		}
+
+		#endregion
+
+		#region StateEngine parser
 
 		/// <summary>
 		/// Parse the TextEditor.Text document and tracks the txtDocDirty flag.
@@ -236,7 +252,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			return Activator.CreateInstance (controlType) as IComponent;
 		}
 
-		private IComponent ProcessControlProperties (XElement element, IComponent component)
+		private void ProcessControlProperties (XElement element, IComponent component)
 		{
 			if (component is ListControl)
 				ParseListItems (component as ListControl, element);
@@ -246,8 +262,6 @@ namespace AspNetEdit.Editor.ComponentModel
 				containerControl.InnerHtml = GetTextFromEditor (element.Region.End, element.ClosingTag.Region.Begin);
 			}
 
-			// Since we have no Designers the TypeDescriptorsFilteringService won't work :(
-			// looking for properties and events declared as attributes of the server control node
 			Attribute[] filter = new Attribute[] { BrowsableAttribute.Yes};
 			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (component.GetType (), filter);
 			PropertyDescriptor desc = null;
@@ -256,28 +270,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			foreach (XAttribute attr in element.Attributes) {
 				desc = pCollection.Find (attr.Name.Name, true);
-//				if ((desc != null) && !desc.IsReadOnly) {
-//					var converter = TypeDescriptor.GetConverter (desc.PropertyType) as TypeConverter;
-//					if (converter != null) {
-//						desc.SetValue (component, converter.ConvertFromString (attr.Value));
-//					} else {
-//						throw new NotSupportedException ("No TypeConverter found for property of type " + desc.PropertyType.Name);
-//					}
-//				} else if (CultureInfo.InvariantCulture.CompareInfo.IsPrefix (attr.Name.Name.ToLower (), "on")) {
-//					// TODO: filter events for the component  !?
-//					IEventBindingService iebs = (IEventBindingService) host.GetService (typeof (IEventBindingService));
-//					if (iebs == null)
-//						throw new Exception ("Could not obtain IEventBindingService from host");
-//
-//					string eventName = attr.Name.Name.Replace ("On", string.Empty);
-//					evDesc = eCollection.Find (eventName, true);
-//					if (evDesc != null) {
-//						desc = iebs.GetEventProperty(evDesc);
-//					}
-//				}
 				// if we have an event attribute
 				if (desc == null && CultureInfo.InvariantCulture.CompareInfo.IsPrefix (attr.Name.Name.ToLower (), "on")) {
-					IEventBindingService iebs = host.GetService (typeof (IEventBindingService)) as IEventBindingService;
+					IEventBindingService iebs = host.GetService (typeof(IEventBindingService)) as IEventBindingService;
 					if (iebs == null)
 						throw new Exception ("Could not obtain IEventBindingService from host");
 
@@ -290,15 +285,13 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				if (desc == null)
 					continue;
-					//throw new Exception ("Could not find property " + attr.Name.Name + " of type " + component.GetType ().ToString ());
+				//throw new Exception ("Could not find property " + attr.Name.Name + " of type " + component.GetType ().ToString ());
 
 				if (desc.IsReadOnly)
 					continue;
 
 				desc.SetValue (component, desc.Converter.ConvertFromString (attr.Value));
 			}
-
-			return component;
 		}
 
 		void ParseListItems (ListControl lControl, XElement tag)
@@ -421,7 +414,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void OnChanged ()
 		{
-			if (Changed != null)
+			if ((Changed != null) && !suppressSerialization)
 				Changed (this, EventArgs.Empty);
 		}
 

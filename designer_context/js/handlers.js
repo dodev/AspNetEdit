@@ -1,5 +1,13 @@
 function control_onMouseDown (eventArgs) {
 	var controlId = selMan.ExtractControlId (this.id);
+	switch (eventArgs.which) {
+		case 3:
+		signalMan.ShowContextMenu (eventArgs.clientX, eventArgs.clientY, controlId);
+		return false;
+		break;
+	}
+
+	
 	var changed = false;
 	if (jQuery (this).hasClass (noConflict.prefix+"selected")) {
 		if (selMan.Count () > 1) {

@@ -51,6 +51,7 @@ namespace AspNetEdit.Editor.UI
 		string baseUri;
 		string designerContext;
 		DesignerMessageManager msgManager;
+		ContextMenu menu;
 		
 		// dodev: To be tested with WebKit
 		//there's weird bug where a second Gecko instance *can't* be created
@@ -76,10 +77,16 @@ namespace AspNetEdit.Editor.UI
 
 			baseUri = String.Empty;
 			designerContext = String.Empty;
-			msgManager = new DesignerMessageManager (host as DesignerHost);
+			msgManager = new DesignerMessageManager (host as DesignerHost,  this);
+			menu = new ContextMenu (host as DesignerHost);
+			menu.Initialize ();
 
 			// subscribe to messages from the designer surface
 			this.TitleChanged += new TitleChangedHandler (WebView_OnTitleChanged);
+		}
+
+		public ContextMenu CtxMenu {
+			get { return menu; }
 		}
 
 		public void InitProperties ()

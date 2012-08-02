@@ -25,7 +25,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Collections;
 using System.ComponentModel;
+using System.ComponentModel.Design;
 
 using MonoDevelop.Xml.StateEngine;
 using MonoDevelop.AspNet.Parser;
@@ -136,6 +138,42 @@ namespace AspNetEdit.Editor.ComponentModel
 				RemoveAttribute (el, memberDesc.Name);
 			else
 				SetAttribtue (el, key, value);
+		}
+
+		public void RemoveSelected ()
+		{
+			var selServ = this.host.GetService (typeof (ISelectionService)) as ISelectionService;
+			if (selServ == null)
+				throw new Exception ("Could not get selection from designer host");
+
+			ArrayList selectedItems = new ArrayList (selServ.GetSelectedComponents ());
+
+			document.WaitForChanges ();
+
+			for (int i = selectedItems.Count - 1; i >= 0; i--) {
+				var comp = selectedItems[i] as IComponent;
+				RemoveControlTag (comp.Site.Name);
+			}
+
+			document.CommitChanges ();
+		}
+
+		public void RemoveControlTag (string id)
+		{
+			if (id == null)
+				throw new ArgumentNullException ("Cannot find component by an empty string");
+
+			IComponent comp = host.GetComponent (id);
+			if (comp == null)
+				throw new InvalidOperationException ("Component with that name doesn't exists: " + id);
+
+			XDocument doc = document.Parse ().XDocument;
+			XElement tag = GetControlTag (doc.RootElement, id);
+			if (tag == null)
+				throw new InvalidOperationException ("The the tag for the component was not found. ID: " + id);
+
+			document.RemoveText (tag.Region);
+			host.Container.Remove (comp);
 		}
 
 		XElement GetControlTag (XElement container, string id)

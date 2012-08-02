@@ -73,6 +73,7 @@ namespace AspNetEdit.Editor
 			services.AddService (typeof(IExtenderListService), extListServ);
 			services.AddService (typeof(IExtenderProviderService), extListServ);
 			services.AddService (typeof(ITypeDescriptorFilterService), new TypeDescriptorFilterService ());
+			services.AddService (typeof (IMenuCommandService), new AspNetEdit.Editor.ComponentModel.MenuCommandService ());
 			//services.AddService (typeof (IToolboxService), toolboxService);
 			
 			WebFormReferenceManager refMan = new WebFormReferenceManager (project);

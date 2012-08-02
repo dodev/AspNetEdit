@@ -32,16 +32,19 @@ using System.ComponentModel.Design;
 using System.Collections.Generic;
 
 using AspNetEdit.Editor.ComponentModel;
+using AspNetEdit.Editor.UI;
 
 namespace AspNetEdit.Editor.DesignerLink
 {
 	public class DesignerMessageManager
 	{
 		DesignerHost host;
+		RootDesignerView view;
 
-		public DesignerMessageManager (DesignerHost dhost)
+		public DesignerMessageManager (DesignerHost dhost, RootDesignerView rview)
 		{
 			host = dhost;
+			view = rview;
 		}
 
 		private T DeserializeMessage<T> (string json)
@@ -66,9 +69,29 @@ namespace AspNetEdit.Editor.DesignerLink
 			case "selection_changed":
 				ChangeSelection (msg.Arguments);
 				break;
+			case "context_menu_request":
+				ShowContextMenu (msg.Arguments);
+				break;
 			default:
 				break;
 			}
+		}
+
+		int x = 0, y = 0;
+
+		void ShowContextMenu (string arguments)
+		{
+			ContextMenuArgs args = DeserializeMessage<ContextMenuArgs> (arguments);
+			x = args.X;
+			y = args.Y;
+			view.CtxMenu.ShowMenu ();
+		}
+
+		private void positionFunc (Gtk.Menu menu, out int x, out int y, out bool pushIn)
+		{
+			x = this.x;
+			y = this.y;
+			pushIn = false;
 		}
 
 		private void ChangeSelection (string arguments)
@@ -98,6 +121,13 @@ namespace AspNetEdit.Editor.DesignerLink
 			// index of the primary selection elementt
 			public int PrimarySelection { get; set; }
 			public string[] SelectedIds { get; set; }
+		}
+
+		private class ContextMenuArgs
+		{
+			public int X { get; set; }
+			public int Y { get; set; }
+			public string ComponentId { get; set; }
 		}
 	}
 }
