@@ -64,8 +64,6 @@ namespace AspNetEdit.Editor.ComponentModel
 		private Control parent;
 		private DesignerHost host;
 
-		AspNetParser parser;
-		AspNetParsedDocument aspNetDoc;
 		ExtensibleTextEditor textEditor;
 		// notes when the content of the textEditor doesn't match the content of the XDocument
 		bool txtDocDirty;
@@ -101,9 +99,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (!host.Loading)
 				throw new InvalidOperationException ("The document cannot be initialised or loaded unless the host is loading"); 
 
-			parser = new AspNetParser ();
 			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
-			aspNetDoc = null;
 			txtDocDirty = true;
 			suppressSerialization = false;
 			updateEditorContent = new ManualResetEvent (true);
@@ -139,7 +135,10 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void CommitChanges ()
 		{
-			updateEditorContent.WaitOne ();
+			// wait for all other threads to finish their updating the document
+			if (txtDocDirty)
+				updateEditorContent.WaitOne ();
+
 			suppressSerialization = false;
 			OnChanged ();
 		}
@@ -156,15 +155,16 @@ namespace AspNetEdit.Editor.ComponentModel
 			// waiting if someone is about to change the contents of the document
 			updateEditorContent.WaitOne ();
 			if (TxtDocDirty) {
-				aspNetDoc = Parse (textEditor.Text, textEditor.FileName);
+				MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.UpdateParseDocument ();
 				TxtDocDirty = false;
 			}
-			return aspNetDoc;
+			return MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument;
 		}
 
 		AspNetParsedDocument Parse (string doc, string fileName)
 		{
 			AspNetParsedDocument parsedDoc = null;
+			AspNetParser parser = new AspNetParser ();
 			using (StringReader strRd = new StringReader (doc)) {
 				parsedDoc = parser.Parse (true, fileName, strRd, textEditor.Project) as AspNetParsedDocument;
 			}
