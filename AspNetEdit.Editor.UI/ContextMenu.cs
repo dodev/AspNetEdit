@@ -67,7 +67,9 @@ namespace AspNetEdit.Editor.UI
 
 		void propertiesItem_OnActivated (object o, EventArgs args)
 		{
-			// show the property grid
+			Gtk.Application.Invoke (delegate {
+				MonoDevelop.Ide.IdeApp.Workbench.GetPad<MonoDevelop.DesignerSupport.PropertyPad> ().BringToFront (true);
+			});
 		}
 	}
 }
