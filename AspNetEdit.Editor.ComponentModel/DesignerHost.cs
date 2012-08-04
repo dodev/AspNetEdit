@@ -346,7 +346,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			this.Container.Add (new WebFormPage());
 			this.rootDocument = new Document ((Control)rootComponent, this, txtEditor);
-			rootDocument.Changed += new EventHandler (Document_OnChanged);
+			//rootDocument.Changed += new EventHandler (Document_OnChanged);
+
 			serializer = new DocumentSerializer (this);
 			designerSerializer = new DesignerSerializer (this);
 
@@ -391,12 +392,23 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			// subscribe to changes in the component container
 			container.ComponentChanged += new ComponentChangedEventHandler (OnComponentUpdated);
+
+			// serialize when a transaction is closed
+			TransactionClosed += new DesignerTransactionCloseEventHandler (this_OnTransactionClosed);
 		}
 
 		public void Document_OnChanged (object o, EventArgs args)
 		{
 			System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(SerializeDocument));
 			serializerThread.Start ();
+		}
+
+		public void this_OnTransactionClosed (object o, DesignerTransactionCloseEventArgs args)
+		{
+			if (args.TransactionCommitted && this.activated) {
+				System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(SerializeDocument));
+				serializerThread.Start ();
+			}
 		}
 
 		public void SerializeDocument ()
@@ -433,10 +445,64 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void OnComponentUpdated (object o, ComponentChangedEventArgs args)
 		{
-			// FIXME: a bug in ComponentChangedEventArgs - switches the return value of NewValue and OldValue
-			if (activated)
-				designerSerializer.UpdateTag (args.Component as IComponent, args.Member, args.OldValue);
+			if (activated) {
+				// FIXME: a bug in ComponentChangedEventArgs - switches the return value of NewValue and OldValue
+				// workaround for the bug
+				// getting the new value directly from the component
+				if (args.Member is PropertyDescriptor) {
+					var propDesc = args.Member as PropertyDescriptor;
+					object newVal = propDesc.GetValue (args.Component);
+					UpdateControlTag (args.Component as IComponent, args.Member, newVal);
+				}
+			}
 		}
+
+		#region DesignerSerializer wrapper
+
+		public void UpdateControlTag (IComponent comp, MemberDescriptor member, object newVal)
+		{
+			using (DesignerTransaction trans = CreateTransaction ("Updating component's tag: " + comp.Site.Name)) {
+				designerSerializer.UpdateTag (comp, member, newVal);
+				if (!InTransaction)
+					trans.Commit ();
+			}
+		}
+
+		public void UpdateControl (string id, string property, string newValue)
+		{
+			using (CreateTransaction ("Updating component: " + id)) {
+
+			}
+		}
+
+		public void RemoveControl (IComponent comp)
+		{
+			using (DesignerTransaction trans = CreateTransaction ("Removing component: " + comp.Site.Name)) {
+				designerSerializer.RemoveControlTag (comp.Site.Name);
+				Container.Remove (comp);
+				trans.Commit ();
+			}
+		}
+
+		public void RemoveSelectedControls ()
+		{
+			using (DesignerTransaction trans = CreateTransaction ("Removing selected components")) {
+				var selServ = GetService (typeof (ISelectionService)) as ISelectionService;
+				if (selServ == null)
+					throw new Exception ("Could not get selection service");
+	
+				ArrayList selectedItems = new ArrayList (selServ.GetSelectedComponents ());
+	
+				for (int i = selectedItems.Count - 1; i >= 0; i--) {
+					var comp = selectedItems[i] as IComponent;
+					designerSerializer.RemoveControlTag (comp.Site.Name);
+					Container.Remove (comp);
+				}
+				trans.Commit ();
+			}
+		}
+
+		#endregion
 
 		#region Wrapping parent ServiceContainer
 

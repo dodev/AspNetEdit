@@ -25,6 +25,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Threading;
 using System.Collections;
 using System.ComponentModel;
 using System.ComponentModel.Design;
@@ -34,6 +35,7 @@ using MonoDevelop.AspNet.Parser;
 using ICSharpCode.NRefactory;
 
 using AspNetEdit.Tools;
+using ICSharpCode.NRefactory.TypeSystem;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -140,24 +142,6 @@ namespace AspNetEdit.Editor.ComponentModel
 				SetAttribtue (el, key, value);
 		}
 
-		public void RemoveSelected ()
-		{
-			var selServ = this.host.GetService (typeof (ISelectionService)) as ISelectionService;
-			if (selServ == null)
-				throw new Exception ("Could not get selection from designer host");
-
-			ArrayList selectedItems = new ArrayList (selServ.GetSelectedComponents ());
-
-			document.WaitForChanges ();
-
-			for (int i = selectedItems.Count - 1; i >= 0; i--) {
-				var comp = selectedItems[i] as IComponent;
-				RemoveControlTag (comp.Site.Name);
-			}
-
-			document.CommitChanges ();
-		}
-
 		public void RemoveControlTag (string id)
 		{
 			if (id == null)
@@ -172,8 +156,16 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (tag == null)
 				throw new InvalidOperationException ("The the tag for the component was not found. ID: " + id);
 
-			document.RemoveText (tag.Region);
-			host.Container.Remove (comp);
+			DomRegion region;
+			if (tag.IsSelfClosing)
+				region = tag.Region;
+			else if (tag.IsClosed)
+				region = new DomRegion (tag.Region.Begin, tag.ClosingTag.Region.End);
+			else
+				throw new InvalidOperationException ("The tag has no closing tag. It cannot be removed");
+
+			document.RemoveText (region);
+
 		}
 
 		XElement GetControlTag (XElement container, string id)

@@ -121,8 +121,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				txtDocDirty = value;
 
 				if (value) {
-					if (!suppressSerialization)
-						OnChanged ();
+					//OnChanged ();
 				}
 			}
 			get { return txtDocDirty; }
@@ -131,14 +130,11 @@ namespace AspNetEdit.Editor.ComponentModel
 		public void WaitForChanges ()
 		{
 			suppressSerialization = true;
+			//pendingChanges.Reset ();
 		}
 
 		public void CommitChanges ()
 		{
-			// wait for all other threads to finish their updating the document
-			if (txtDocDirty)
-				updateEditorContent.WaitOne ();
-
 			suppressSerialization = false;
 			OnChanged ();
 		}
@@ -414,7 +410,8 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void OnChanged ()
 		{
-			if ((Changed != null) && !suppressSerialization)
+
+			if ((Changed != null) && !suppressSerialization && txtDocDirty)
 				Changed (this, EventArgs.Empty);
 		}
 
@@ -443,43 +440,79 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		public void ReplaceText (DomRegion region, string newValue)
 		{
+			if (MonoDevelop.Ide.DispatchService.IsGuiThread)
+				ReplaceTextWorker (region, newValue);
+			else {
+				ManualResetEventSlim finished = new ManualResetEventSlim (false);
+				Gtk.Application.Invoke (delegate {
+					ReplaceTextWorker (region, newValue);
+					finished.Set ();
+				});
+				finished.Wait ();
+			}
+		}
+
+		void ReplaceTextWorker (DomRegion region, string newValue)
+		{
 			// do not parse the document until changes have been made to the text
 			updateEditorContent.Reset ();
 
-			Gtk.Application.Invoke (delegate {
-				textEditor.Remove (region);
-				textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
-				textEditor.InsertAtCaret (newValue);
+			textEditor.Remove (region);
+			textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
+			textEditor.InsertAtCaret (newValue);
 
-				// let the parser know that the content is dirty and set the event
-				TxtDocDirty = true;
-				updateEditorContent.Set ();
-			});
+			// let the parser know that the content is dirty and set the event
+			TxtDocDirty = true;
+			updateEditorContent.Set ();
 		}
 
 		public void RemoveText (DomRegion region)
 		{
+			if (MonoDevelop.Ide.DispatchService.IsGuiThread)
+				RemoveTextWorker (region);
+			else {
+				ManualResetEventSlim finished = new ManualResetEventSlim (false);
+				Gtk.Application.Invoke (delegate {
+					RemoveTextWorker (region);
+					finished.Set ();
+				});
+				finished.Wait ();
+			}
+		}
+
+		void RemoveTextWorker (DomRegion region)
+		{
 			updateEditorContent.Reset ();
 
-			Gtk.Application.Invoke (delegate {
-				textEditor.Remove (region);
+			textEditor.Remove (region);
 
-				TxtDocDirty = true;
-				updateEditorContent.Set ();
-			});
+			TxtDocDirty = true;
+			updateEditorContent.Set ();
 		}
 
 		public void InsertText (TextLocation loc, string text)
 		{
+			if (MonoDevelop.Ide.DispatchService.IsGuiThread)
+				InsertTextWorker (loc, text);
+			else {
+				ManualResetEventSlim finished = new ManualResetEventSlim (false);
+				Gtk.Application.Invoke (delegate {
+					InsertTextWorker (loc, text);
+					finished.Set ();
+				});
+				finished.Wait ();
+			}
+		}
+
+		void InsertTextWorker (TextLocation loc, string text)
+		{
 			updateEditorContent.Reset ();
 
-			Gtk.Application.Invoke (delegate {
-				textEditor.SetCaretTo (loc.Line, loc.Column);
-				textEditor.InsertAtCaret (text);
+			textEditor.SetCaretTo (loc.Line, loc.Column);
+			textEditor.InsertAtCaret (text);
 
-				TxtDocDirty = true;
-				updateEditorContent.Set ();
-			});
+			TxtDocDirty = true;
+			updateEditorContent.Set ();
 		}
 
 		#endregion

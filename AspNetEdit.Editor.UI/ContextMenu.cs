@@ -24,6 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 using System;
+using System.Threading;
 
 using Gtk;
 
@@ -61,7 +62,7 @@ namespace AspNetEdit.Editor.UI
 
 		void deleteItem_OnActivated (object o, EventArgs args)
 		{
-			host.AspNetSerializer.RemoveSelected ();
+			host.RemoveSelectedControls ();
 		}
 
 		void propertiesItem_OnActivated (object o, EventArgs args)

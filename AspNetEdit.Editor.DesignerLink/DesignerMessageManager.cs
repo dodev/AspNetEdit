@@ -30,6 +30,7 @@ using System.Text;
 using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.Collections.Generic;
+using System.Threading;
 
 using AspNetEdit.Editor.ComponentModel;
 using AspNetEdit.Editor.UI;
@@ -77,21 +78,10 @@ namespace AspNetEdit.Editor.DesignerLink
 			}
 		}
 
-		int x = 0, y = 0;
-
 		void ShowContextMenu (string arguments)
 		{
-			ContextMenuArgs args = DeserializeMessage<ContextMenuArgs> (arguments);
-			x = args.X;
-			y = args.Y;
+			//ContextMenuArgs args = DeserializeMessage<ContextMenuArgs> (arguments);
 			view.CtxMenu.ShowMenu ();
-		}
-
-		private void positionFunc (Gtk.Menu menu, out int x, out int y, out bool pushIn)
-		{
-			x = this.x;
-			y = this.y;
-			pushIn = false;
 		}
 
 		private void ChangeSelection (string arguments)
