@@ -56,7 +56,7 @@ namespace AspNetEdit.Editor
 		RootDesignerView designerView;
 		MonoDevelopProxy proxy;
 		
-		public EditorHost (MonoDevelopProxy proxy, AspNetAppProject project, AspNetParsedDocument aspParsedDoc)
+		public EditorHost (MonoDevelopProxy proxy)
 		{
 			this.proxy = proxy;
 			
@@ -75,14 +75,15 @@ namespace AspNetEdit.Editor
 			services.AddService (typeof(ITypeDescriptorFilterService), new TypeDescriptorFilterService ());
 			services.AddService (typeof (IMenuCommandService), new AspNetEdit.Editor.ComponentModel.MenuCommandService ());
 			//services.AddService (typeof (IToolboxService), toolboxService);
-			
-			WebFormReferenceManager refMan = new WebFormReferenceManager (project);
-			refMan.Doc = aspParsedDoc;
-			services.AddService (
-				typeof(WebFormReferenceManager),
-				refMan
-			);
-			
+
+			var project = MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.Project as AspNetAppProject;
+			var aspParsedDoc = MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument;
+			if (project != null && aspParsedDoc != null) {
+				WebFormReferenceManager refMan = new WebFormReferenceManager (project);
+				refMan.Doc = aspParsedDoc;
+				services.AddService (typeof(WebFormReferenceManager), refMan);
+			}
+
 			System.Diagnostics.Trace.WriteLine ("Creating DesignerHost");
 			designerHost = new DesignerHost (services, this);
 			System.Diagnostics.Trace.WriteLine ("Created DesignerHost");
@@ -91,17 +92,9 @@ namespace AspNetEdit.Editor
 		
 		public void Initialise ()
 		{
-		  		Initialise (null);
-		}
-		
-		public void Initialise (ExtensibleTextEditor txtEditor)
-		{
 			DispatchService.AssertGuiThread ();
 			System.Diagnostics.Trace.WriteLine ("Loading document into DesignerHost");
-			if (txtEditor != null)
-				designerHost.Load (txtEditor);
-			else
-				designerHost.NewFile ();
+			designerHost.LoadDocument ();
 			System.Diagnostics.Trace.WriteLine ("Loaded document into DesignerHost");
 			
 			designerHost.Activate ();
@@ -109,9 +102,9 @@ namespace AspNetEdit.Editor
 			
 			IRootDesigner rootDesigner = (IRootDesigner)designerHost.GetDesigner (designerHost.RootComponent);
 			designerView = (RootDesignerView)rootDesigner.GetView (ViewTechnology.Default);
-			designerView.Realized += delegate {
-				System.Diagnostics.Trace.WriteLine ("Designer view realized");
-			};
+//			designerView.Realized += delegate {
+//				System.Diagnostics.Trace.WriteLine ("Designer view realized");
+//			};
 			designerView.Realized += new EventHandler (designerHost.RootDesignerView_Realized);
 		}
 		

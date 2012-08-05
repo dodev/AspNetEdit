@@ -53,13 +53,15 @@ using AspNetEdit.Editor;
 namespace AspNetEdit.Editor
 {
 	[AddinDependency ("MonoDevelop.AspNetEdit")]
-	public class EditorProcess : RemoteDesignerProcess
+	public class EditorProcess //: RemoteDesignerProcess
 	{
 		EditorHost host;
 		ScrolledWindow webKitFrame;
+		Frame designerFrame;
+		//VBox outerBox;
 //		PropertyGrid propertyGrid;
 		
-		public EditorProcess () : base ()
+		public EditorProcess () //: base ()
 		{
 			#if TRACE
 				System.Diagnostics.TextWriterTraceListener listener = new System.Diagnostics.TextWriterTraceListener (System.Console.Out);
@@ -67,53 +69,56 @@ namespace AspNetEdit.Editor
 			#endif
 		}
 		
-		public void Initialise (MonoDevelopProxy proxy, ExtensibleTextEditor txtEditor, AspNetParsedDocument doc)
+		public void Initialise (MonoDevelopProxy proxy, Frame designerFrame)
 		{
 			System.Diagnostics.Trace.WriteLine ("Creating AspNetEdit EditorHost");
-			host = new EditorHost (proxy, (AspNetAppProject)txtEditor.Project, doc);
-			host.Initialise (txtEditor);
+			host = new EditorHost (proxy);
+			host.Initialise ();
 			System.Diagnostics.Trace.WriteLine ("Created AspNetEdit EditorHost");
 			
-			StartGuiThread ();
-			Gtk.Application.Invoke ( delegate { LoadGui (); });
+			//StartGuiThread ();
+			Gtk.Application.Invoke ( delegate { LoadGui (designerFrame); });
 		}
 		
 		public EditorHost Editor {
 			get { return host; }
 		}
 		
-		protected override void HandleError (Exception e)
-		{
-			//remove the grid in case it was the source of the exception, as GTK# expose exceptions can fire repeatedly
-			//also user should not be able to edit things when showing exceptions
-//			if (propertyGrid != null) {
-//				Gtk.Container parent = propertyGrid.Parent as Gtk.Container;
-//				if (parent != null)
-//					parent.Remove (propertyGrid);
-//				
-//				propertyGrid.Destroy ();
-//				propertyGrid = null;
-//			}
-			
-			//show the error message
-			base.HandleError (e);
-		}
+//		protected override void HandleError (Exception e)
+//		{
+//			//remove the grid in case it was the source of the exception, as GTK# expose exceptions can fire repeatedly
+//			//also user should not be able to edit things when showing exceptions
+////			if (propertyGrid != null) {
+////				Gtk.Container parent = propertyGrid.Parent as Gtk.Container;
+////				if (parent != null)
+////					parent.Remove (propertyGrid);
+////				
+////				propertyGrid.Destroy ();
+////				propertyGrid = null;
+////			}
+//			
+//			//show the error message
+//			//base.HandleError (e);
+//		}
 		
-		void LoadGui ()
+		void LoadGui (Frame desFrame)
 		{
+			designerFrame = desFrame;
 			System.Diagnostics.Trace.WriteLine ("Building AspNetEdit GUI");
-			Gtk.VBox outerBox = new Gtk.VBox ();
+			//outerBox = new Gtk.VBox ();
 
 			webKitFrame = new ScrolledWindow ();
 			webKitFrame.BorderWidth = 1;
 			webKitFrame.Add (host.DesignerView);
-			outerBox.PackEnd (webKitFrame, true, true, 0);
+			//outerBox.PackEnd (webKitFrame, true, true, 0);
 			
-			Toolbar tb = BuildToolbar ();
-			outerBox.PackStart (tb, false, false, 0);
+			//Toolbar tb = BuildToolbar ();
+			//outerBox.PackStart (tb, false, false, 0);
 			
-			outerBox.ShowAll ();
-			base.DesignerWidget = outerBox;
+			//outerBox.ShowAll ();
+			webKitFrame.ShowAll ();
+			designerFrame.Add (webKitFrame);
+			//base.DesignerWidget = outerBox;
 			
 			//grid picks up some services from the designer host
 //			propertyGrid = new PropertyGrid (host.Services);
@@ -177,16 +182,20 @@ namespace AspNetEdit.Editor
 		}
 		
 		bool disposed = false;
-		public override void Dispose ()
+		public void Dispose ()
 		{
 			System.Diagnostics.Trace.WriteLine ("Disposing AspNetEdit editor process");
 			
 			if (disposed)
 				return;
 			disposed = true;
-			
+
+			designerFrame.Remove (webKitFrame);
+			webKitFrame.Dispose ();
+			//outerBox.Dispose ();
+
 			host.Dispose ();		
-			base.Dispose ();
+			//base.Dispose ();
 			System.Diagnostics.Trace.WriteLine ("AspNetEdit editor process disposed");
 		}
 	}

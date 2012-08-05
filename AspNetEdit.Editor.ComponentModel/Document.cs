@@ -77,19 +77,21 @@ namespace AspNetEdit.Editor.ComponentModel
 		public Document (Control parent, DesignerHost host, string documentName)
 		{
 			initDocument (parent, host);
-			Parse (String.Format (newDocument, documentName), documentName);
+			//newDocument. this.textEditor
+			//Parse (String.Format (newDocument, documentName), documentName);
 			// TODO: get a ExtensibleTextEditor instance, if we have an new empty file
 		}
 		
 		///<summary>Creates a document from an existing file</summary>
-		public Document (Control parent, DesignerHost host, ExtensibleTextEditor txtEditor)
+		public Document (Control parent, DesignerHost host)
 		{
-			textEditor = txtEditor;
 			initDocument (parent, host);
 		}
 		
 		private void initDocument (Control parent, DesignerHost host)
 		{
+			textEditor = MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.PrimaryView.GetContent<SourceEditorView> ().TextEditor;
+
 			System.Diagnostics.Trace.WriteLine ("Creating document...");
 			if (!(parent is WebFormPage))
 				throw new NotImplementedException ("Only WebFormsPages can have a document for now");

@@ -45,7 +45,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		public RootDesigner (IComponent component)
 		{
 			System.Diagnostics.Trace.WriteLine ("Creating RootDesigner");
-			view = RootDesignerView.GetInstance (component.Site.GetService (typeof (IDesignerHost)) as IDesignerHost);
+			view = new RootDesignerView (component.Site.GetService (typeof (IDesignerHost)) as IDesignerHost);
 		}
 
 		#region IRootDesigner Members

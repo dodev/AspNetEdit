@@ -57,17 +57,17 @@ namespace AspNetEdit.Editor.UI
 		//there's weird bug where a second Gecko instance *can't* be created
 		//so until it's fixed we reuse share one instance
 		//TODO: make it so we can have more than one shown at the same time
-		public static RootDesignerView instance = null;
-		
-		public static RootDesignerView GetInstance (IDesignerHost host)
-		{
-			if (instance == null)
-				instance = new RootDesignerView (host);
-			instance.active = false;
-			return instance;
-		}
+//		public static RootDesignerView instance = null;
+//		
+//		public static RootDesignerView GetInstance (IDesignerHost host)
+//		{
+//			if (instance == null)
+//				instance = new RootDesignerView (host);
+//			instance.active = false;
+//			return instance;
+//		}
 
-		private RootDesignerView (IDesignerHost host)
+		public RootDesignerView (IDesignerHost host)
 			: base()
 		{
 			//we use the host to get services and designers

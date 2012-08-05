@@ -59,7 +59,7 @@ namespace AspNetEdit.Integration
 		IViewContent viewContent;
 		EditorProcess editorProcess;
 		
-		Gtk.Socket designerSocket;
+//		Gtk.Socket designerSocket;
 //		Gtk.Socket propGridSocket;
 		
 //		Frame propertyFrame;
@@ -71,7 +71,8 @@ namespace AspNetEdit.Integration
 		MonoDevelopProxy proxy;
 		
 		bool activated = false;
-		bool suppressSerialisation = false;
+		bool blockSelected = false;
+		//bool suppressSerialisation = false;
 		
 		internal AspNetEditViewContent (IViewContent viewContent)
 		{
@@ -87,18 +88,31 @@ namespace AspNetEdit.Integration
 //			propertyFrame.Shadow = ShadowType.None;
 //			propertyFrame.BorderWidth = 0;
 			
-			viewContent.WorkbenchWindow.Closing += workbenchWindowClosingHandler;
+			viewContent.WorkbenchWindow.Closing += new WorkbenchWindowEventHandler(workbenchWindowClosingHandler);
+			//viewContent.WorkbenchWindow.ActiveViewContentChanged += new ActiveViewContentEventHandler (WorkbenchWidnowViewContentChanged);
 			
 			outlineStore = null;
-			outlineStore = null;
+			outlineView = null;
 			
 			designerFrame.Show ();
 		}
-		
+
+		void WorkbenchWidnowViewContentChanged (object o, ActiveViewContentEventArgs args)
+		{
+			var baseViewContent = this as IBaseViewContent;
+			var sourceEditorView = this.viewContent as IBaseViewContent; 
+			if (sourceEditorView.Equals (args.Content) || baseViewContent.Equals (args.Content)) {
+				blockSelected = false;
+			} else {
+				blockSelected = true;
+			}
+		}
+
 		void workbenchWindowClosingHandler (object sender, WorkbenchWindowEventArgs args)
 		{
-			if (activated)
-				suppressSerialisation = true;
+			if (!disposed)
+				Dispose ();
+			blockSelected = true;
 		}
 		
 		public override Gtk.Widget Control {
@@ -124,15 +138,23 @@ namespace AspNetEdit.Integration
 			designerFrame.Destroy ();
 			base.Dispose ();
 		}
-		
+
+		bool IsInCurrentViewContent ()
+		{
+			return IdeApp.Workbench.ActiveDocument.ActiveView.Equals (this as IBaseViewContent);
+		}
+
 		public override void Selected ()
 		{
-			if (editorProcess != null)
+			if (blockSelected || !IsInCurrentViewContent ())
+				return;
+
+			if (activated)
 				throw new Exception ("Editor should be null when document is selected");
 			
-			designerSocket = new Gtk.Socket ();
-			designerSocket.Show ();
-			designerFrame.Add (designerSocket);
+//			designerSocket = new Gtk.Socket ();
+//			designerSocket.Show ();
+//			designerFrame.Add (designerSocket);
 			
 //			propGridSocket = new Gtk.Socket ();
 //			propGridSocket.Show ();
@@ -142,14 +164,14 @@ namespace AspNetEdit.Integration
 			//editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
 			editorProcess = new EditorProcess ();
 			
-			if (designerSocket.IsRealized)
-				editorProcess.AttachDesigner (designerSocket.Id);
+//			if (designerSocket.IsRealized)
+//				editorProcess.AttachDesigner (designerSocket.Id);
 //			if (propGridSocket.IsRealized)
 //				editorProcess.AttachPropertyGrid (propGridSocket.Id);
 			
-			designerSocket.Realized += delegate {
-				editorProcess.AttachDesigner (designerSocket.Id);
-			};
+//			designerSocket.Realized += delegate {
+//				editorProcess.AttachDesigner (designerSocket.Id);
+//			};
 //			propGridSocket.Realized += delegate {
 //				editorProcess.AttachPropertyGrid (propGridSocket.Id);
 //			};
@@ -157,74 +179,54 @@ namespace AspNetEdit.Integration
 			//designerSocket.FocusOutEvent += delegate {
 			//	MonoDevelop.DesignerSupport.DesignerSupport.Service.PropertyPad.BlankPad (); };
 
-			SourceEditorView srcEditor = viewContent.GetContent<SourceEditorView> () as SourceEditorView;
-			AspNetParsedDocument doc = null;
+//			SourceEditorView srcEditor = viewContent.GetContent<SourceEditorView> () as SourceEditorView;
+//			AspNetParsedDocument doc = null;
 			
 			//hook up proxy for event binding
 			//string codeBehind = null;
-			if (viewContent.Project != null) {
-				using (StringReader reader = new StringReader (srcEditor.Text)) {
-					AspNetParser parser = new AspNetParser ();
-					doc = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
-						as AspNetParsedDocument;
-				}
-			}
-			proxy = new MonoDevelopProxy (viewContent.Project, doc.Info.InheritedClass);
-			
-			editorProcess.Initialise (proxy, srcEditor.TextEditor, doc);
-			
-			activated = true;
+//			if (viewContent.Project != null) {
+//				using (StringReader reader = new StringReader (srcEditor.Text)) {
+//					AspNetParser parser = new AspNetParser ();
+//					doc = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
+//						as AspNetParsedDocument;
+//				}
+//			}
 
-			// TODO: update the tree on changes in the Dom
-			BuildTreeStore (doc.XDocument);
+			var doc = IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument;
+			if (doc != null) {
+				proxy = new MonoDevelopProxy (viewContent.Project, doc.Info.InheritedClass);
+				editorProcess.Initialise (proxy, designerFrame);
+				activated = true;
+	
+				// TODO: update the tree on changes in the Dom
+				BuildTreeStore (doc.XDocument);
+				IdeApp.Workbench.ActiveDocument.DocumentParsed += document_OnParsed;
+			}
 		}
 		
 		public override void Deselected ()
 		{
-			activated = false;
-			
-			//don't need to save if window is closing
-			if (!suppressSerialisation)
-				saveDocumentToTextView ();
-			
+			activated = false;			
 			DestroyEditorAndSockets ();
 		}
-			
-		void saveDocumentToTextView ()
-		{
-			if (editorProcess != null && !editorProcess.ExceptionOccurred) {
-				/* TODO: Reimplement the Editor.GetDocument method
-				IEditableTextBuffer textBuf = (IEditableTextBuffer) viewContent.GetContent<IEditableTextBuffer> ();
-				
-				string doc = null;
-				try {
-					doc = editorProcess.Editor.GetDocument ();
-				} catch (Exception e) {
-					MonoDevelop.Ide.MessageService.ShowException (e,
-						AddinManager.CurrentLocalizer.GetString (
-					        "The document could not be retrieved from the designer"));
-				}
-			
-				if (doc != null)
-					textBuf.Text = doc;
-					
-				*/
-			}
-		}
+
 		
 		void DestroyEditorAndSockets ()
 		{
 			// FIXME: dispose the EditorProcess and the sockets
-			editorProcess = null;
-//			if (proxy != null) {
-//				proxy.Dispose ();
-//				proxy = null;
-//			}
-//			
-//			if (editorProcess != null) {
-//				editorProcess.Dispose ();
-//				editorProcess = null;
-//			}
+			if (proxy != null) {
+				proxy.Dispose ();
+				proxy = null;
+			}
+			
+			if (editorProcess != null) {
+				editorProcess.Dispose ();
+				editorProcess = null;
+			}
+
+			if (IdeApp.Workbench.ActiveDocument != null) {
+				IdeApp.Workbench.ActiveDocument.DocumentParsed -= document_OnParsed;
+			}
 //			
 //			if (propGridSocket != null) {
 //				propertyFrame.Remove (propGridSocket);
@@ -233,7 +235,6 @@ namespace AspNetEdit.Integration
 //			}
 //			
 //			if (designerSocket != null) {
-//				designerFrame.Remove (designerSocket);
 //				designerSocket.Dispose ();
 //				designerSocket = null;
 //			}
@@ -337,7 +338,12 @@ namespace AspNetEdit.Integration
 		}
 		
 		#endregion IOutlinedDocument implementation
-		
+
+		void document_OnParsed (object o, EventArgs args)
+		{
+			BuildTreeStore ((IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument).XDocument);
+		}
+
 		void BuildTreeStore (XDocument doc)
 		{
 			outlineStore = new TreeStore (typeof (object));
