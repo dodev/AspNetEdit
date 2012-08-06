@@ -40,6 +40,7 @@ using MonoDevelop.SourceEditor;
 
 using AspNetEdit.Editor.UI;
 using AspNetEdit.Tools;
+using AspNetEdit.Editor.DesignerLink;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -202,11 +203,11 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 
 			System.Web.Script.Serialization.JavaScriptSerializer jsonizer = new System.Web.Script.Serialization.JavaScriptSerializer ();
-			strBuilder.Append ("<div id=\"aspnetedit_init_values_container\" style=\"display:none;\"> ");
-			strBuilder.Append ("<span id=\"aspnetedit_selectable_items\">");
+			strBuilder.AppendFormat ("<div id=\"{0}\" style=\"display:none;\"> ", DesignerNames.ElementInitContClass);
+			strBuilder.AppendFormat ("<span id=\"{0}\">", DesignerNames.ElementSelectableContClass);
 			jsonizer.Serialize (clientIds.ToArray (), strBuilder);
 			strBuilder.Append ("</span>");
-			strBuilder.Append ("<span id=\"aspnetedit_selected_items\">");
+			strBuilder.AppendFormat ("<span id=\"{0}\">", DesignerNames.ElementSeletectedContClass);
 			jsonizer.Serialize (selectedIds.ToArray (), strBuilder);
 			strBuilder.Append ("</span>");
 			strBuilder.Append ("</div>");

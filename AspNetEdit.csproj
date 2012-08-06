@@ -203,6 +203,7 @@
     <Compile Include="AspNetEdit.Tools\XDocumentHelper.cs" />
     <Compile Include="AspNetEdit.Editor.DesignerLink\DesignerMessageManager.cs" />
     <Compile Include="AspNetEdit.Editor.UI\ContextMenu.cs" />
+    <Compile Include="AspNetEdit.Editor.DesignerLink\DesignerNames.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="AspNetEdit.addin.xml">

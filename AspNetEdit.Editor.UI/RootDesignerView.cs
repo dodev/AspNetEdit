@@ -118,7 +118,7 @@ namespace AspNetEdit.Editor.UI
 			};
 			string styleDir = System.IO.Path.Combine (designerDir, "css");
 			string[] styleSheets = {
-				"control_style.css"
+				"editor_style.css"
 			};
 
 			StringBuilder sb = new StringBuilder ();

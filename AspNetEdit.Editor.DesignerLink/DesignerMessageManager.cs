@@ -61,20 +61,17 @@ namespace AspNetEdit.Editor.DesignerLink
 		public void HandleMessage (string json)
 		{
 			// a message is an object, so always starts with a "{\"Message\":"
-			string msgHeader = "{\"MsgName\":";
+			string msgHeader = DesignerNames.MessagePreambula;
 			if ((json.Length < msgHeader.Length) || (json.Substring (0, msgHeader.Length) != msgHeader))
 				return;
 
 			BasicMessage msg = DeserializeMessage<BasicMessage> (json);
-			switch (msg.MsgName) {
-			case "selection_changed":
+			if (msg.MsgName == DesignerNames.MsgNameSelection) {
 				ChangeSelection (msg.Arguments);
-				break;
-			case "context_menu_request":
+			} else if (msg.MsgName == DesignerNames.MsgNameContext) {
 				ShowContextMenu (msg.Arguments);
-				break;
-			default:
-				break;
+			} else {
+
 			}
 		}
 

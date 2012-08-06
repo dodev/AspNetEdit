@@ -51,6 +51,7 @@ FILES =  \
 	AspNetEdit.Editor.ComponentModel/TypeResolutionService.cs \
 	AspNetEdit.Editor.ComponentModel/WebFormPage.cs \
 	AspNetEdit.Editor.DesignerLink/DesignerMessageManager.cs \
+	AspNetEdit.Editor.DesignerLink/DesignerNames.cs \
 	AspNetEdit.Editor.UI/ContextMenu.cs \
 	AspNetEdit.Editor.UI/PropertyGrid.cs \
 	AspNetEdit.Editor.UI/RootDesignerView.cs \
