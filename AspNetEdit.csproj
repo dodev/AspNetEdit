@@ -213,11 +213,6 @@
     <None Include="ChangeLog" />
     <None Include="AspNetEdit.make" />
     <None Include="configure" />
-    <None Include="designer_context\css\control_style.css">
-      <DeployService-Deploy>true</DeployService-Deploy>
-      <DeployService-TargetDirectoryId>Binaries</DeployService-TargetDirectoryId>
-      <DeployService-UseProjectRelativePath>true</DeployService-UseProjectRelativePath>
-    </None>
     <None Include="designer_context\js\handlers.js" />
     <None Include="designer_context\js\jquery-1.7.2.min.js" />
     <None Include="designer_context\js\main.js" />
@@ -225,6 +220,11 @@
     <None Include="designer_context\js\SignalManager.js" />
     <None Include="designer_context\js\globals.js" />
     <None Include="designer_context\js\config.js" />
+    <None Include="designer_context\css\editor_style.css">
+      <DeployService-Deploy>true</DeployService-Deploy>
+      <DeployService-TargetDirectoryId>Binaries</DeployService-TargetDirectoryId>
+      <DeployService-UseProjectRelativePath>true</DeployService-UseProjectRelativePath>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions>

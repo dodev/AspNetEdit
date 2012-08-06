@@ -1,5 +1,5 @@
 /*
-	globals.js - variables used in the objects of the editor
+	editor_style.css - defining the style for design time elements on the designer surface
 	
       Copyright 2012 Petar Dodev
 
@@ -15,5 +15,5 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-var selMan = new SelectionManager ();
-var signalMan = new SignalManager ();
+.aspnetedit_selected { border: 2px dashed #777; }
+.aspnetedit_control_marker { position: absolute;  padding: 2px; z-index: 99999;}
