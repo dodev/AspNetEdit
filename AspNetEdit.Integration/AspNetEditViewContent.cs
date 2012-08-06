@@ -41,7 +41,6 @@ using MonoDevelop.AspNet.Parser;
 using MonoDevelop.Ide.Gui;
 using MonoDevelop.Core;
 using MonoDevelop.Ide;
-using MonoDevelop.Core.Execution;
 using MonoDevelop.DesignerSupport.Toolbox;
 using MonoDevelop.DesignerSupport;
 using MonoDevelop.Components.PropertyGrid;
@@ -57,13 +56,10 @@ namespace AspNetEdit.Integration
 	public class AspNetEditViewContent : AbstractAttachableViewContent, IToolboxConsumer, IOutlinedDocument, IPropertyPadProvider //, IEditableTextBuffer
 	{
 		IViewContent viewContent;
-		EditorProcess editorProcess;
-		
-//		Gtk.Socket designerSocket;
-//		Gtk.Socket propGridSocket;
-		
-//		Frame propertyFrame;
-		Gtk.Frame designerFrame;
+		EditorHost host; 
+
+		Frame designerFrame;
+		ScrolledWindow webKitWindow;
 		
 		MonoDevelop.Ide.Gui.Components.PadTreeView outlineView;
 		Gtk.TreeStore outlineStore;
@@ -72,7 +68,6 @@ namespace AspNetEdit.Integration
 		
 		bool activated = false;
 		bool blockSelected = false;
-		//bool suppressSerialisation = false;
 		
 		internal AspNetEditViewContent (IViewContent viewContent)
 		{
@@ -80,32 +75,15 @@ namespace AspNetEdit.Integration
 			
 			designerFrame = new Frame ();
 			designerFrame.CanFocus = true;
-			designerFrame.Shadow = ShadowType.None;
-			designerFrame.BorderWidth = 0;
-			
-//			propertyFrame = new Frame ();
-//			propertyFrame.CanFocus = true;
-//			propertyFrame.Shadow = ShadowType.None;
-//			propertyFrame.BorderWidth = 0;
+			designerFrame.Shadow = ShadowType.Out;
+			designerFrame.BorderWidth = 1;
 			
 			viewContent.WorkbenchWindow.Closing += new WorkbenchWindowEventHandler(workbenchWindowClosingHandler);
-			//viewContent.WorkbenchWindow.ActiveViewContentChanged += new ActiveViewContentEventHandler (WorkbenchWidnowViewContentChanged);
 			
 			outlineStore = null;
 			outlineView = null;
 			
 			designerFrame.Show ();
-		}
-
-		void WorkbenchWidnowViewContentChanged (object o, ActiveViewContentEventArgs args)
-		{
-			var baseViewContent = this as IBaseViewContent;
-			var sourceEditorView = this.viewContent as IBaseViewContent; 
-			if (sourceEditorView.Equals (args.Content) || baseViewContent.Equals (args.Content)) {
-				blockSelected = false;
-			} else {
-				blockSelected = true;
-			}
 		}
 
 		void workbenchWindowClosingHandler (object sender, WorkbenchWindowEventArgs args)
@@ -151,55 +129,22 @@ namespace AspNetEdit.Integration
 
 			if (activated)
 				throw new Exception ("Editor should be null when document is selected");
-			
-//			designerSocket = new Gtk.Socket ();
-//			designerSocket.Show ();
-//			designerFrame.Add (designerSocket);
-			
-//			propGridSocket = new Gtk.Socket ();
-//			propGridSocket.Show ();
-//			propertyFrame.Add (propGridSocket);
-			
-			// FIXME: Runtime.ProcessService cannot load EditorProcess from AspNetEdit assembly
-			//editorProcess = (EditorProcess)Runtime.ProcessService.CreateExternalProcessObject (typeof(EditorProcess), false);
-			editorProcess = new EditorProcess ();
-			
-//			if (designerSocket.IsRealized)
-//				editorProcess.AttachDesigner (designerSocket.Id);
-//			if (propGridSocket.IsRealized)
-//				editorProcess.AttachPropertyGrid (propGridSocket.Id);
-			
-//			designerSocket.Realized += delegate {
-//				editorProcess.AttachDesigner (designerSocket.Id);
-//			};
-//			propGridSocket.Realized += delegate {
-//				editorProcess.AttachPropertyGrid (propGridSocket.Id);
-//			};
-			
-			//designerSocket.FocusOutEvent += delegate {
-			//	MonoDevelop.DesignerSupport.DesignerSupport.Service.PropertyPad.BlankPad (); };
-
-//			SourceEditorView srcEditor = viewContent.GetContent<SourceEditorView> () as SourceEditorView;
-//			AspNetParsedDocument doc = null;
-			
-			//hook up proxy for event binding
-			//string codeBehind = null;
-//			if (viewContent.Project != null) {
-//				using (StringReader reader = new StringReader (srcEditor.Text)) {
-//					AspNetParser parser = new AspNetParser ();
-//					doc = parser.Parse (true, viewContent.ContentName, reader, viewContent.Project)
-//						as AspNetParsedDocument;
-//				}
-//			}
 
 			var doc = IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument;
 			if (doc != null) {
 				proxy = new MonoDevelopProxy (viewContent.Project, doc.Info.InheritedClass);
-				editorProcess.Initialise (proxy, designerFrame);
+				System.Diagnostics.Trace.WriteLine ("Creating AspNetEdit EditorHost");
+				host = new EditorHost (proxy);
+				host.Initialise ();
+				System.Diagnostics.Trace.WriteLine ("Created AspNetEdit EditorHost");
 				activated = true;
-	
-				// TODO: update the tree on changes in the Dom
+
+				// Loading the GUI of the Designer
+				LoadGui ();
+
+				// Loading the doc structure in the DocumentOutlinePad
 				BuildTreeStore (doc.XDocument);
+				// subscribing to changes in the DOM
 				IdeApp.Workbench.ActiveDocument.DocumentParsed += document_OnParsed;
 			}
 		}
@@ -210,34 +155,38 @@ namespace AspNetEdit.Integration
 			DestroyEditorAndSockets ();
 		}
 
-		
+		void LoadGui ()
+		{
+			System.Diagnostics.Trace.WriteLine ("Building AspNetEdit GUI");
+
+			webKitWindow = new ScrolledWindow ();
+			webKitWindow.Add (host.DesignerView);
+			webKitWindow.ShowAll ();
+			designerFrame.Add (webKitWindow);
+			System.Diagnostics.Trace.WriteLine ("Built AspNetEdit GUI");
+		}
+
 		void DestroyEditorAndSockets ()
 		{
-			// FIXME: dispose the EditorProcess and the sockets
 			if (proxy != null) {
 				proxy.Dispose ();
 				proxy = null;
 			}
-			
-			if (editorProcess != null) {
-				editorProcess.Dispose ();
-				editorProcess = null;
+
+			if (host != null) {
+				System.Diagnostics.Trace.WriteLine ("Disposing AspNetEdit's EditorHost");
+
+				designerFrame.Remove (webKitWindow);
+				webKitWindow.Dispose ();
+				host.Dispose ();
+				host = null;
+
+				System.Diagnostics.Trace.WriteLine ("Disposed AspNetEdit's EditorHost");
 			}
 
 			if (IdeApp.Workbench.ActiveDocument != null) {
 				IdeApp.Workbench.ActiveDocument.DocumentParsed -= document_OnParsed;
 			}
-//			
-//			if (propGridSocket != null) {
-//				propertyFrame.Remove (propGridSocket);
-//				propGridSocket.Dispose ();
-//				propGridSocket = null;
-//			}
-//			
-//			if (designerSocket != null) {
-//				designerSocket.Dispose ();
-//				designerSocket = null;
-//			}
 		}
 		
 		#region IToolboxConsumer
@@ -245,7 +194,7 @@ namespace AspNetEdit.Integration
 		public void ConsumeItem (ItemToolboxNode node)
 		{
 			if (node is ToolboxItemToolboxNode)
-				editorProcess.Editor.UseToolboxNode (node);
+				host.UseToolboxNode (node);
 		}
 		
 		//used to filter toolbox items
@@ -398,15 +347,15 @@ namespace AspNetEdit.Integration
 				}
 			}
 			
-			if (isRunAtServer && (id != string.Empty) && (editorProcess != null)) {
+			if (isRunAtServer && (id != string.Empty) && (host != null)) {
 
 				// TODO: Add a unique field to editable nodes. the id of the node is not guaranteed to be the component's Site.Name
-				IComponent selected = editorProcess.Editor.DesignerHost.GetComponent (id);
+				IComponent selected = host.DesignerHost.GetComponent (id);
 
 				if (selected != null) {
 					//var properties = TypeDescriptor.GetProperties (selected) as PropertyDescriptorCollection;
 
-					var selServ = editorProcess.Editor.Services.GetService (typeof (ISelectionService)) as ISelectionService;
+					var selServ = host.Services.GetService (typeof (ISelectionService)) as ISelectionService;
 					selServ.SetSelectedComponents (new IComponent[] {selected});
 				}
 			}
@@ -418,7 +367,7 @@ namespace AspNetEdit.Integration
 
 		public object GetActiveComponent ()
 		{
-			var selServ = editorProcess.Editor.Services.GetService (typeof (ISelectionService)) as ISelectionService;
+			var selServ = host.Services.GetService (typeof (ISelectionService)) as ISelectionService;
 			if (selServ == null)
 				return null;
 
@@ -439,24 +388,5 @@ namespace AspNetEdit.Integration
 
 		}
 		#endregion
-		
-//		class DesignerFrame: Frame//, ICustomPropertyPadProvider
-//		{
-//			AspNetEditViewContent view;
-//			
-//			public DesignerFrame (AspNetEditViewContent view)
-//			{
-//				this.view = view;
-//			}
-			
-//			Gtk.Widget ICustomPropertyPadProvider.GetCustomPropertyWidget ()
-//			{
-//				return view.propertyFrame;
-//			}
-//			
-//			void ICustomPropertyPadProvider.DisposeCustomPropertyWidget ()
-//			{
-//			}
-//		}
 	}
 }
