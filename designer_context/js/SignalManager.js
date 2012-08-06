@@ -16,6 +16,13 @@
    limitations under the License.
 */
 function SignalManager () {
+	// make sure there is a head tag in the document
+	this.Initialize = function () {
+		if (jQuery ("title").length < 1) {
+			jQuery ("head").append (document.createElement ("title"));			
+		}
+	};
+		
 	this.Send = function (msg) {
 		jQuery ("title").html (JSON.stringify (msg));
 	};

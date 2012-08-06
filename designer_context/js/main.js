@@ -23,6 +23,8 @@ jQuery (function () {
 	document.onmousedown = function() {return false;};
 	// do not show the WebView's context menu
 	document.oncontextmenu = function() {return false;};
+	// initialize the signal manager
+	signalMan.Initialize ();
 	// initialize the selection manager
-	selMan.Initialize ();	
+	selMan.Initialize ();
 });
