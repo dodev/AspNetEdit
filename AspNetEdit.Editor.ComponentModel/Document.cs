@@ -459,9 +459,8 @@ namespace AspNetEdit.Editor.ComponentModel
 			// do not parse the document until changes have been made to the text
 			updateEditorContent.Reset ();
 
-			textEditor.Remove (region);
 			textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
-			textEditor.InsertAtCaret (newValue);
+			textEditor.Replace (textEditor.Caret.Offset, GetTextFromEditor (region.Begin, region.End).Length, newValue);
 
 			// let the parser know that the content is dirty and set the event
 			TxtDocDirty = true;
