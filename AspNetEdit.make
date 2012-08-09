@@ -60,6 +60,7 @@ FILES =  \
 	AspNetEdit.Integration/AspNetEditDisplayBinding.cs \
 	AspNetEdit.Integration/AspNetEditViewContent.cs \
 	AspNetEdit.Integration/MonoDevelopProxy.cs \
+	AspNetEdit.Tools/UndoTracker.cs \
 	AspNetEdit.Tools/XDocumentHelper.cs \
 	AssemblyInfo.cs
 

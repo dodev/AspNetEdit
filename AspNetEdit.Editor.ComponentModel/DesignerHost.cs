@@ -395,12 +395,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 			// serialize when a transaction is closed
 			TransactionClosed += new DesignerTransactionCloseEventHandler (this_OnTransactionClosed);
-		}
 
-		public void Document_OnChanged (object o, EventArgs args)
-		{
-			System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(SerializeDocument));
-			serializerThread.Start ();
+			// subscibe for undo or redo events
+			RootDocument.UndoRedo += document_OnUndoRedo;
 		}
 
 		public void this_OnTransactionClosed (object o, DesignerTransactionCloseEventArgs args)
@@ -411,12 +408,35 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
+		public void document_OnUndoRedo (object o, EventArgs evArgs)
+		{
+			System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(SerializeDocumentHard));
+			serializerThread.Start ();
+		}
+
 		public void SerializeDocument ()
 		{
    			string html = serializer.GetDesignableHtml ();
 
 			// fire the event
 			OnDocumentChanged (html);
+		}
+
+		/// <summary>
+		/// Serializes the document with re-checking the components for updated tags.
+		/// </summary>
+		public void SerializeDocumentHard ()
+		{
+			// unsubscribe for those events during the persisting of the document
+			container.ComponentChanged -= OnComponentUpdated;
+			TransactionClosed -= this_OnTransactionClosed;
+
+			RootDocument.PersistControls ();
+			string html = serializer.GetDesignableHtml ();
+			OnDocumentChanged (html);
+
+			container.ComponentChanged += OnComponentUpdated;
+			TransactionClosed += this_OnTransactionClosed;
 		}
 
 		public class DocumentChangedEventArgs: EventArgs
@@ -495,6 +515,10 @@ namespace AspNetEdit.Editor.ComponentModel
 	
 				for (int i = selectedItems.Count - 1; i >= 0; i--) {
 					var comp = selectedItems[i] as IComponent;
+
+					if (RootComponent.Equals (comp))
+						continue;
+
 					designerSerializer.RemoveControlTag (comp.Site.Name);
 					Container.Remove (comp);
 				}

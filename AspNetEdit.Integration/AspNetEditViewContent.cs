@@ -49,6 +49,9 @@ using MonoDevelop.Xml.StateEngine;
 
 using AspNetEdit.Editor;
 using AspNetEdit.Editor.ComponentModel;
+using MonoDevelop.Components.Commands;
+using MonoDevelop.Ide.Commands;
+using MonoDevelop.Ide.Gui.Content;
 
 namespace AspNetEdit.Integration
 {
@@ -56,7 +59,7 @@ namespace AspNetEdit.Integration
 	public class AspNetEditViewContent : AbstractAttachableViewContent, IToolboxConsumer, IOutlinedDocument, IPropertyPadProvider //, IEditableTextBuffer
 	{
 		IViewContent viewContent;
-		EditorHost host; 
+		EditorHost host;
 
 		Frame designerFrame;
 		ScrolledWindow webKitWindow;
@@ -72,7 +75,7 @@ namespace AspNetEdit.Integration
 		internal AspNetEditViewContent (IViewContent viewContent)
 		{
 			this.viewContent = viewContent;
-			
+
 			designerFrame = new Frame ();
 			designerFrame.CanFocus = true;
 			designerFrame.Shadow = ShadowType.Out;
@@ -362,6 +365,47 @@ namespace AspNetEdit.Integration
 		}
 		
 		#endregion DocumentOutline stuff
+
+		#region Editor command
+
+		[CommandHandler (EditCommands.Delete)]
+		protected void OnDelete ()
+		{
+			host.DesignerHost.RemoveSelectedControls ();
+		}
+		
+		[CommandUpdateHandler (EditCommands.Delete)]
+		protected void OnUpdateDelete (CommandInfo info)
+		{
+			var selServ = host.Services.GetService (typeof (ISelectionService)) as ISelectionService;
+			info.Enabled = selServ != null && selServ.SelectionCount > 0;
+		}
+
+		[CommandHandler (EditCommands.Undo)]
+		protected void OnUndo ()
+		{
+			host.DesignerHost.RootDocument.Undo ();
+		}
+		
+		[CommandUpdateHandler (EditCommands.Undo)]
+		protected void OnUpdateUndo (CommandInfo info)
+		{
+			info.Enabled = host != null && host.DesignerHost.RootDocument.CanUndo ();
+		}
+		
+		[CommandHandler (EditCommands.Redo)]
+		protected void OnRedo ()
+		{
+			host.DesignerHost.RootDocument.Redo ();
+		}
+		
+		[CommandUpdateHandler (EditCommands.Redo)]
+		protected void OnUpdateRedo (CommandInfo info)
+		{
+			info.Enabled = host != null && host.DesignerHost.RootDocument.CanRedo ();
+		}
+
+		#endregion Editor command
 
 		#region IPropertyPadProvider implementation
 

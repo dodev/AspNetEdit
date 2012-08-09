@@ -42,15 +42,18 @@ using System.Globalization;
 using System.Reflection;
 using System.Threading;
 
+using MonoDevelop.Ide;
 using MonoDevelop.Xml.StateEngine;
 using MonoDevelop.AspNet;
 using MonoDevelop.AspNet.Parser;
 using MonoDevelop.AspNet.StateEngine;
 using MonoDevelop.SourceEditor;
-
+using MonoDevelop.Ide.Gui.Content;
 using ICSharpCode.NRefactory;
 using ICSharpCode.NRefactory.TypeSystem;
+
 using AspNetEdit.Tools;
+using System.ComponentModel.Design.Serialization;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
@@ -65,11 +68,15 @@ namespace AspNetEdit.Editor.ComponentModel
 		private DesignerHost host;
 
 		ExtensibleTextEditor textEditor;
+
+		// undo/redo wrapper of the SourceEditorView's funcitionality 
+		UndoTracker undoTracker;
+		IUndoHandler undoHandler;
+
 		// notes when the content of the textEditor doesn't match the content of the XDocument
 		bool txtDocDirty;
 		// do not serialize the document to HTML
 		bool suppressSerialization;
-
 		// blocks threads from parsing the document when it been edited
 		ManualResetEvent updateEditorContent;
 		
@@ -105,6 +112,10 @@ namespace AspNetEdit.Editor.ComponentModel
 			txtDocDirty = true;
 			suppressSerialization = false;
 			updateEditorContent = new ManualResetEvent (true);
+			undoTracker = new UndoTracker ();
+			undoHandler = IdeApp.Workbench.ActiveDocument.PrimaryView.GetContent <IUndoHandler> ();
+			if (undoHandler == null)
+				throw new NullReferenceException ("Could not obtain the IUndoHandler from the SourceEditorView");
 		}
 
 		public void InitControlsAndDirectives ()
@@ -153,10 +164,10 @@ namespace AspNetEdit.Editor.ComponentModel
 			// waiting if someone is about to change the contents of the document
 			updateEditorContent.WaitOne ();
 			if (TxtDocDirty) {
-				MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.UpdateParseDocument ();
+				IdeApp.Workbench.ActiveDocument.UpdateParseDocument ();
 				TxtDocDirty = false;
 			}
-			return MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument;
+			return IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument;
 		}
 
 		AspNetParsedDocument Parse (string doc, string fileName)
@@ -168,6 +179,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 			return parsedDoc;
 		}
+
 
 		void ParseDirectives ()
 		{
@@ -183,6 +195,10 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
+		/// <summary>
+		/// Checks the document for control tags, creates components and adds the to the IContainer.
+		/// Adds id attributes to tags that are server controls but doesn't have it.
+		/// </summary>
 		void ParseControls ()
 		{
 			// no need to serialize the document, if we add just an id attribute to a control
@@ -208,16 +224,20 @@ namespace AspNetEdit.Editor.ComponentModel
 
 							if (comp == null)
 								continue;
-
-							this.host.Container.Add (comp, id);
-							ProcessControlProperties (element, comp);
 	
 							// add id to the component, for later recognition if it has not ID
 							if (String.IsNullOrEmpty(id)) {
-								host.AspNetSerializer.SetAttribtue (element, "id", comp.Site.Name);
+								var nameServ = host.GetService (typeof (INameCreationService)) as INameCreationService;
+								if (nameServ == null)
+									throw new Exception ("Could not obtain INameCreationService from the DesignerHost.");
+
+								host.AspNetSerializer.SetAttribtue (element, "id", nameServ.CreateName (host.Container, comp.GetType ()));
 								updateEditorContent.WaitOne (); // wait until the changes have been applied to the document
 								break;
-							} 
+							}
+
+							this.host.Container.Add (comp, id);
+							ProcessControlProperties (element, comp);
 						}
 					}
 				}
@@ -250,7 +270,35 @@ namespace AspNetEdit.Editor.ComponentModel
 			return Activator.CreateInstance (controlType) as IComponent;
 		}
 
-		private void ProcessControlProperties (XElement element, IComponent component)
+		/// <summary>
+		/// Parses the control's tag and sets the properties of the corresponding component
+		/// </summary>
+		/// <param name='element'>
+		/// The ASP.NET tag
+		/// </param>
+		/// <param name='component'>
+		/// The sited component
+		/// </param>
+		void ProcessControlProperties (XElement element, IComponent component)
+		{
+			ProcessControlProperties (element, component, false);
+		}
+
+		/// <summary>
+		/// Parses the control's tag and sets the properties of the corresponding component
+		/// + checking and setting to default value, the properties which are not explicitly set
+		/// in the ASP.NET code
+		/// </summary>
+		/// <param name='element'>
+		/// The ASP.NET tag
+		/// </param>
+		/// <param name='component'>
+		/// The sited component
+		/// </param>
+		/// <param name='checkForDefaults'>
+		/// Filter the non-explicitly defined properties and set them to the default value.
+		/// </param>
+		void ProcessControlProperties (XElement element, IComponent component, bool checkForDefaults)
 		{
 			if (component is ListControl)
 				ParseListItems (component as ListControl, element);
@@ -260,11 +308,12 @@ namespace AspNetEdit.Editor.ComponentModel
 				containerControl.InnerHtml = GetTextFromEditor (element.Region.End, element.ClosingTag.Region.Begin);
 			}
 
-			Attribute[] filter = new Attribute[] { BrowsableAttribute.Yes};
+			Attribute[] filter = new Attribute[] { BrowsableAttribute.Yes, ReadOnlyAttribute.No };
 			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (component.GetType (), filter);
 			PropertyDescriptor desc = null;
 			EventDescriptorCollection eCollection = TypeDescriptor.GetEvents (component.GetType (), filter);
 			EventDescriptor evDesc = null;
+			List<PropertyDescriptor> explicitDeclarations = new List<PropertyDescriptor> ();
 
 			foreach (XAttribute attr in element.Attributes) {
 				desc = pCollection.Find (attr.Name.Name, true);
@@ -285,10 +334,26 @@ namespace AspNetEdit.Editor.ComponentModel
 					continue;
 				//throw new Exception ("Could not find property " + attr.Name.Name + " of type " + component.GetType ().ToString ());
 
-				if (desc.IsReadOnly)
-					continue;
-
 				desc.SetValue (component, desc.Converter.ConvertFromString (attr.Value));
+
+				// add it to the properties that are defined in asp.net code
+				if (checkForDefaults)
+					explicitDeclarations.Add (desc);
+			}
+
+			// find properties not defined as attributes in the element and set them to the default value
+			if (checkForDefaults) {
+				foreach (PropertyDescriptor pDesc in pCollection) {
+					if (!explicitDeclarations.Contains (pDesc))
+						continue;
+
+					object currVal = pDesc.GetValue (component);
+
+					if (!pDesc.Attributes.Contains (new DefaultValueAttribute (currVal)))
+						continue;
+
+					pDesc.SetValue (component, (pDesc.Attributes [typeof (DefaultValueAttribute)] as DefaultValueAttribute).Value);
+				}
 			}
 		}
 
@@ -403,12 +468,51 @@ namespace AspNetEdit.Editor.ComponentModel
 			return compType;
 		}
 
+		/// <summary>
+		/// Check if the state of all the components in the container matches
+		/// their the that defined in their elements attributes
+		/// </summary>
+		public void PersistControls ()
+		{
+			var doc = Parse ();
+
+			foreach (XNode node in doc.XDocument.RootElement.AllDescendentElements) {
+				if (!(node is XElement))
+					continue;
+	
+				var element = node as XElement;
+	
+				if (element.Name.HasPrefix || XDocumentHelper.IsRunAtServer (element)) {
+					string id = XDocumentHelper.GetAttributeValueCI (element.Attributes, "id");
+
+					bool checkDefaults;
+					IComponent comp = host.GetComponent(id);
+					if (comp == null) {
+						// adding a new component
+						comp = ProcessControl (element);
+
+						if (comp == null)
+							continue;
+
+						// assuming that we have an id already
+						host.Container.Add (comp, id);
+						checkDefaults = false;
+					} else {
+						checkDefaults = true;
+					}
+
+					ProcessControlProperties (element, comp, checkDefaults);
+				}
+			}
+		}
+
 		#endregion
 		
 		#region Designer communication
 
 		public event EventHandler Changing;
 		public event EventHandler Changed;
+		public event EventHandler UndoRedo;
 
 		public void OnChanged ()
 		{
@@ -421,6 +525,12 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			if (Changing != null)
 				Changing (this, EventArgs.Empty);
+		}
+
+		public void OnUndoRedo ()
+		{
+			if (UndoRedo != null)
+				UndoRedo (this, EventArgs.Empty);
 		}
 
 		#endregion
@@ -462,6 +572,8 @@ namespace AspNetEdit.Editor.ComponentModel
 			textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
 			textEditor.Replace (textEditor.Caret.Offset, GetTextFromEditor (region.Begin, region.End).Length, newValue);
 
+			undoTracker.FinishAction ();
+
 			// let the parser know that the content is dirty and set the event
 			TxtDocDirty = true;
 			updateEditorContent.Set ();
@@ -486,6 +598,8 @@ namespace AspNetEdit.Editor.ComponentModel
 			updateEditorContent.Reset ();
 
 			textEditor.Remove (region);
+
+			undoTracker.FinishAction ();
 
 			TxtDocDirty = true;
 			updateEditorContent.Set ();
@@ -512,11 +626,45 @@ namespace AspNetEdit.Editor.ComponentModel
 			textEditor.SetCaretTo (loc.Line, loc.Column);
 			textEditor.InsertAtCaret (text);
 
+			undoTracker.FinishAction ();
+
 			TxtDocDirty = true;
 			updateEditorContent.Set ();
 		}
 
 		#endregion
+
+		#region Undo/Redo wrapper
+
+		public void Undo ()
+		{
+			if (undoTracker.CanUndo) {
+				undoHandler.Undo ();
+				undoTracker.UndoAction ();
+				OnUndoRedo ();
+			}
+		}
+
+		public void Redo ()
+		{
+			if (undoTracker.CanRedo) {
+				undoHandler.Redo ();
+				undoTracker.RedoAction ();
+				OnUndoRedo ();
+			}
+		}
+
+		public bool CanUndo ()
+		{
+			return undoTracker.CanUndo;
+		}
+
+		public bool CanRedo ()
+		{
+			return undoTracker.CanRedo;
+		}
+
+		#endregion Undo/Redo wrapper
 
 		//we need this to invoke protected member before rendering
 		private static MethodInfo onPreRenderMethodInfo;
