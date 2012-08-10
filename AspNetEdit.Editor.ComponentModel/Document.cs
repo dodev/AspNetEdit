@@ -344,15 +344,34 @@ namespace AspNetEdit.Editor.ComponentModel
 			// find properties not defined as attributes in the element and set them to the default value
 			if (checkForDefaults) {
 				foreach (PropertyDescriptor pDesc in pCollection) {
-					if (!explicitDeclarations.Contains (pDesc))
+					if (explicitDeclarations.Contains (pDesc))
 						continue;
 
 					object currVal = pDesc.GetValue (component);
 
-					if (!pDesc.Attributes.Contains (new DefaultValueAttribute (currVal)))
+					if (pDesc.Attributes.Contains (new DefaultValueAttribute (currVal)))
 						continue;
 
-					pDesc.SetValue (component, (pDesc.Attributes [typeof (DefaultValueAttribute)] as DefaultValueAttribute).Value);
+					object defVal = (pDesc.Attributes [typeof (DefaultValueAttribute)] as DefaultValueAttribute).Value;
+
+					// some of the default values attributes are set in different types
+					if (!pDesc.PropertyType.IsAssignableFrom (defVal.GetType ())) {
+						// usually the default value that mismatches the type of the property is a string
+						if (defVal.GetType () != typeof (String))
+							continue;
+
+						// if it's an empty string and the property is an integer we have a problem
+						// the empty string is usually interpreted as -1
+						// FIXME: find a not so hacky solution for the problem
+						if (pDesc.PropertyType.IsAssignableFrom (typeof (Int32)) && String.IsNullOrEmpty ((string) defVal)) {
+							defVal = (object) -1;
+						} else {
+							// finally we have string which we can convert with the help of the property's typeconver
+							defVal = pDesc.Converter.ConvertFromString ((string)defVal);
+						}
+					}
+						
+					pDesc.SetValue (component, defVal);
 				}
 			}
 		}
@@ -640,6 +659,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			if (undoTracker.CanUndo) {
 				undoHandler.Undo ();
+				TxtDocDirty = true;
 				undoTracker.UndoAction ();
 				OnUndoRedo ();
 			}
@@ -649,6 +669,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			if (undoTracker.CanRedo) {
 				undoHandler.Redo ();
+				TxtDocDirty = true;
 				undoTracker.RedoAction ();
 				OnUndoRedo ();
 			}
