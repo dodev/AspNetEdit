@@ -17,13 +17,18 @@
 */
 function SelectionManager () {
 	var selectedIds = [];
+	// index of the primary selection in the selectedIds array
 	var primarySelection = -1;
+	// used in methods, where the "this" global can be from other context
 	var instance = this;
 	
+	// inits the markers' elements
 	this.Initialize = function () {
+		// get the the init params from the backend of the editor
 		var selectable = JSON.parse (jQuery ("#" + initParams.selectable).html ());
 		var selected = JSON.parse (jQuery ("#" + initParams.selected).html ());
 		
+		// add markers for all selectable items
 		for (var id in selectable) {
 			var el = jQuery ("#" + selectable[id]);
 			if (el.length != 1)
@@ -31,8 +36,11 @@ function SelectionManager () {
 
 			var marker = jQuery (document.createElement ("div"));
 			marker.addClass (noConflict.marker);
+			// id of the marker contains a nonConflict prefix + the id of the item it
+			// stands for
 			marker.attr ("id", noConflict.forPrefix + selectable[id]);
 			marker.bind ("mousedown", control_onMouseDown);
+			// add the marker to the end of the body tag
 			jQuery ("body").append (marker);
 		}
 		// place the markers above the controls
@@ -47,6 +55,8 @@ function SelectionManager () {
 		$(window).resize (this.PositionMarkers);
 	};
 	
+	// refresh the position of the marker elements
+	// they should have absolute for the css position property
 	this.PositionMarkers = function () {
 		jQuery ("." + noConflict.marker).each (function () {
 			var id = instance.ExtractControlId (this.id);
@@ -62,11 +72,13 @@ function SelectionManager () {
 		});
 	};
 	
+	// combined method that adds an id to the list + shows the marker
 	this.Select = function (id) {
 		this.AddItem (id);
 		this.ShowMarker (id);		
 	};
 	
+	// removes an item from the list and hides marker
 	this.Deselect = function (id) {
 		this.RemoveItem (id);
 		this.HideMarker (id);
@@ -144,6 +156,8 @@ function SelectionManager () {
 		return selectedIds;
 	};
 	
+	// for a javascript dom element, gets its absolute position
+	// and returns an object with properties "top" and "lect"
 	this.GetCoordinates = function (element) {
 		var top = 0;
 		var left = 0;
@@ -151,6 +165,8 @@ function SelectionManager () {
 		while (element) {
 			top += element.offsetTop;
 			left += element.offsetLeft;
+			// if the element doesn't have an offset parent
+			// element is set to null, and the loop ends
 			element = element.offsetParent;
 		}
 		

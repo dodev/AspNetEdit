@@ -1,5 +1,6 @@
 /*
-	globals.js - variables used in the objects of the editor
+	globals.js - declaring global objects of the main prototypes of
+			the editor's front-end
 	
       Copyright 2012 Petar Dodev
 

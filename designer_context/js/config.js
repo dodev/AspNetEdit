@@ -1,6 +1,7 @@
 /*
-	confing.js
-	
+	confing.js - declares variables related to naming conventions
+			and style parameters
+
       Copyright 2012 Petar Dodev
 
    Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +18,14 @@
 */
 
 var markerConfig = {
+	// width of the border, for calculating the correct position of the marker
+	// declared in editor_style.css file
 	borderWidth:2,
+	// declared in editor_style.css file
 	padding:	2
 };
 
+// names and prefixes for classes and ids in the designer surface
 var noConflict = {
 	prefix: 	"aspnetedit_",
 	marker: 	"aspnetedit_control_marker",
@@ -28,6 +33,8 @@ var noConflict = {
 	forPrefix:	"aspnetedit_for_"
 };
 
+// name of the classes of the divs containing a json-serialized objects to
+// used to initialize the front-end of the designer
 var initParams = {
 	selectable:	"aspnetedit_selectable_items",
 	selected:	"aspnetedit_selected_items"
