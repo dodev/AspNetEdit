@@ -1,5 +1,6 @@
 /*
-* XDocumentHelper.cs
+* XDocumentHelper.cs - useful methods for working with XDocument instances
+* 					and AspNetParsedDocuments
 * 
 * Authors: 
 *  Petar Dodev <petar.dodev@gmail.com>
@@ -25,6 +26,18 @@ namespace AspNetEdit.Tools
 {
 	public static class XDocumentHelper
 	{
+		/// <summary>
+		/// Gets the value of an attribute with name. The name is queried with a case insensitive search
+		/// </summary>
+		/// <returns>
+		/// The value of the attribute or null if the an attribute with that name was not found
+		/// </returns>
+		/// <param name='attributes'>
+		/// Attribute collection to be traversed
+		/// </param>
+		/// <param name='key'>
+		/// Name of the attribute.
+		/// </param>
 		public static string GetAttributeValueCI (XAttributeCollection attributes, string key)
 		{
 			XName nameKey = new XName (key.ToLowerInvariant ());
@@ -36,6 +49,18 @@ namespace AspNetEdit.Tools
 			return String.Empty;
 		}
 
+		/// <summary>
+		/// Gets the XAttribute instance of an attribute. The name is queried with a case insensitive search
+		/// </summary>
+		/// <returns>
+		/// The XAttribute instance of an attribute or null, if none was found.
+		/// </returns>
+		/// <param name='attributes'>
+		/// Attribute collection.
+		/// </param>
+		/// <param name='key'>
+		/// Name of the attribute.
+		/// </param>
 		public static XAttribute GetAttributeCI (XAttributeCollection attributes, string key)
 		{
 			XName nameKey = new XName (key.ToLowerInvariant ());
@@ -47,6 +72,15 @@ namespace AspNetEdit.Tools
 			return null;
 		}
 
+		/// <summary>
+		/// Determines whether this XElement instance contains a runat="server" attribute.
+		/// </summary>
+		/// <returns>
+		/// <c>true</c> if this instance contains a runat="server" attribute; otherwise, <c>false</c>.
+		/// </returns>
+		/// <param name='el'>
+		/// The XElement instace to be checked
+		/// </param>
 		public static bool IsRunAtServer (XElement el)
 		{
 			XName runat = new XName ("runat");

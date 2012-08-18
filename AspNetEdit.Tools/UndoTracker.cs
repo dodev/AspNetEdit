@@ -1,5 +1,7 @@
 /*
-* UndoTracker.cs
+* UndoTracker.cs - a simple undo tracker that counts the actions
+* 				that were performed and those that can be undone
+* 				or redone.
 * 
 * Authors: 
 *  Petar Dodev <petar.dodev@gmail.com>
@@ -23,27 +25,52 @@ namespace AspNetEdit.Tools
 {
 	public class UndoTracker
 	{
+		/// <summary>
+		/// Length of the undo queue
+		/// </summary>
 		int undoQueue;
+		/// <summary>
+		/// Length of the redo queue.
+		/// </summary>
 		int redoQueue;
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="AspNetEdit.Tools.UndoTracker"/> class
+		/// with zero values for the length of the queues
+		/// </summary>
 		public UndoTracker ()
 		{
 			undoQueue = 0;
 			redoQueue = 0;
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the <see cref="AspNetEdit.Tools.UndoTracker"/> class
+		/// </summary>
+		/// <param name='undo'>
+		/// Current length of the undo queue
+		/// </param>
+		/// <param name='redo'>
+		/// Current length of the redo queue
+		/// </param>
 		public UndoTracker (int undo, int redo)
 		{
 			undoQueue = undo;
 			redoQueue = redo;
 		}
 
+		/// <summary>
+		/// Add one action to the undo queue and flush the redo queue.
+		/// </summary>
 		public void FinishAction ()
 		{
 			redoQueue = 0;
 			undoQueue++;
 		}
 
+		/// <summary>
+		/// Undo an action.
+		/// </summary>
 		public void UndoAction ()
 		{
 			if (undoQueue > 0) {
@@ -51,7 +78,10 @@ namespace AspNetEdit.Tools
 				redoQueue++;
 			}
 		}
-		
+
+		/// <summary>
+		/// Redos an action.
+		/// </summary>
 		public void RedoAction ()
 		{
 			if (redoQueue > 0) {
