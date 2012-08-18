@@ -45,33 +45,63 @@ namespace AspNetEdit.Editor.ComponentModel
 			document = host.RootDocument;
 		}
 
-		// adds an attribute to the end of the openning  tag
+		/// <summary>
+		/// Inserts an attribute to an XElement in the source code editor.
+		/// </summary>
+		/// <param name='el'>
+		/// the tag's XElement instance
+		/// </param>
+		/// <param name='key'>
+		/// Key.
+		/// </param>
+		/// <param name='value'>
+		/// Value.
+		/// </param>
 		public void InsertAttribute (XElement el, string key, string value)
 		{
 			int line = el.Region.EndLine;
 			int column = 1;
+			// a preceding space or nothing
 			string preambula = String.Empty;
+			// a space or nothing after the last quote
 			string ending = String.Empty;
 
 			if (el.IsSelfClosing) {
 				column = el.Region.EndColumn - 2; // "/>"
+				// a space before the /> of the tag
 				ending = " ";
 			} else {
 				column = el.Region.EndColumn -1; // ">"
+				// no need for a space in the end of an openning tag
 			}
 
+			// check if a space is needed infront of the attribute
+			// or the method should write at the first column of a new line
 			if (column > 1) {
 				string whatsBeforeUs = document.GetTextFromEditor (line, column - 1, line, column);
 				if (!String.IsNullOrWhiteSpace (whatsBeforeUs))
 					preambula = " ";
 			}
 
+			// finally, insert the result
 			document.InsertText (
 				new TextLocation (line, column),
 				String.Format ("{0}{1}=\"{2}\"{3}", preambula, key, value, ending)
 			);
 		}
 
+		/// <summary>
+		/// Updates the attribute with name key of element el.
+		/// </summary>
+		/// <param name='el'>
+		/// the tag's XElement instance
+		/// </param>
+		/// <param name='key'>
+		/// Key.
+		/// </param>
+		/// <param name='value'>
+		/// The new value of the attribute
+		/// </param>
 		public void UpdateAttribute (XElement el, string key, string value)
 		{
 			UpdateAttribute (
@@ -80,6 +110,15 @@ namespace AspNetEdit.Editor.ComponentModel
 			);
 		}
 
+		/// <summary>
+		/// Updates the given attribute to the newValue string.
+		/// </summary>
+		/// <param name='attr'>
+		/// The XAttribute instace of the attribute
+		/// </param>
+		/// <param name='newValue'>
+		/// The string of the new value.
+		/// </param>
 		public void UpdateAttribute (XAttribute attr, string newValue)
 		{
 			document.ReplaceText (
@@ -88,6 +127,18 @@ namespace AspNetEdit.Editor.ComponentModel
 			);
 		}
 
+		/// <summary>
+		/// Sets an attribtue value in the source code editor to the provided value string.
+		/// </summary>
+		/// <param name='el'>
+		/// the tag's XElement instance
+		/// </param>
+		/// <param name='key'>
+		/// Name of the attribute
+		/// </param>
+		/// <param name='value'>
+		/// The string of the new value.
+		/// </param>
 		public void SetAttribtue (XElement el, string key, string value)
 		{
 			XAttribute attr = XDocumentHelper.GetAttributeCI (el.Attributes, key);
@@ -97,6 +148,15 @@ namespace AspNetEdit.Editor.ComponentModel
 				UpdateAttribute (attr, value);
 		}
 
+		/// <summary>
+		/// Removes an attribute with name "key" from XElement "el" in the source code editor
+		/// </summary>
+		/// <param name='el'>
+		/// the tag's XElement instance
+		/// </param>
+		/// <param name='key'>
+		/// Name of the attribute
+		/// </param>
 		public void RemoveAttribute (XElement el, string key)
 		{
 			document.RemoveText (
@@ -104,6 +164,18 @@ namespace AspNetEdit.Editor.ComponentModel
 			);
 		}
 
+		/// <summary>
+		/// Updates a control's tag in the source code editor.
+		/// </summary>
+		/// <param name='component'>
+		/// The changed component.
+		/// </param>
+		/// <param name='memberDesc'>
+		/// Member desc of the property that was changed.
+		/// </param>
+		/// <param name='newVal'>
+		/// The new value of the changed property.
+		/// </param>
 		public void UpdateTag (IComponent component, MemberDescriptor memberDesc, object newVal)
 		{
 			string key = String.Empty;
@@ -137,6 +209,12 @@ namespace AspNetEdit.Editor.ComponentModel
 				SetAttribtue (el, key, value);
 		}
 
+		/// <summary>
+		/// Removes a control tag from the source code editor
+		/// </summary>
+		/// <param name='id'>
+		/// Identifier of the control.
+		/// </param>
 		public void RemoveControlTag (string id)
 		{
 			if (id == null)
@@ -163,6 +241,18 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		}
 
+		/// <summary>
+		/// Gets the control tag's XElement instance.
+		/// </summary>
+		/// <returns>
+		/// The control tag.
+		/// </returns>
+		/// <param name='container'>
+		/// The Xelement that contains the control's XElement instance
+		/// </param>
+		/// <param name='id'>
+		/// Identifier of the control.
+		/// </param>
 		XElement GetControlTag (XElement container, string id)
 		{
 			XElement controlTag = null;
