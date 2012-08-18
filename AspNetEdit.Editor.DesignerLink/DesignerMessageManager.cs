@@ -43,6 +43,18 @@ namespace AspNetEdit.Editor.DesignerLink
 			view = rview;
 		}
 
+		/// <summary>
+		/// Deserializes a JSON string to an object of Type T
+		/// </summary>
+		/// <returns>
+		/// The object.
+		/// </returns>
+		/// <param name='json'>
+		/// JSON encoded string.
+		/// </param>
+		/// <typeparam name='T'>
+		/// The expected type of the deserialized object.
+		/// </typeparam>
 		private T DeserializeMessage<T> (string json)
 		{
 			T msg;
@@ -53,6 +65,12 @@ namespace AspNetEdit.Editor.DesignerLink
 			return msg;
 		}
 
+		/// <summary>
+		/// Handles a message from the designer surface.
+		/// </summary>
+		/// <param name='json'>
+		/// JSON encoded string.
+		/// </param>
 		public void HandleMessage (string json)
 		{
 			// a message is an object, so always starts with a "{\"Message\":"
@@ -60,7 +78,9 @@ namespace AspNetEdit.Editor.DesignerLink
 			if ((json.Length < msgHeader.Length) || (json.Substring (0, msgHeader.Length) != msgHeader))
 				return;
 
+			// get the message object
 			BasicMessage msg = DeserializeMessage<BasicMessage> (json);
+			// switch between the message types depending on the MsgName property
 			if (msg.MsgName == DesignerNames.MsgNameSelection) {
 				ChangeSelection (msg.Arguments);
 			} else if (msg.MsgName == DesignerNames.MsgNameContext) {
@@ -70,18 +90,31 @@ namespace AspNetEdit.Editor.DesignerLink
 			}
 		}
 
+		/// <summary>
+		/// ShowCOntextMenu handler
+		/// </summary>
+		/// <param name='arguments'>
+		/// Arguments.
+		/// </param>
 		void ShowContextMenu (string arguments)
 		{
 			//ContextMenuArgs args = DeserializeMessage<ContextMenuArgs> (arguments);
 			view.CtxMenu.ShowMenu ();
 		}
 
+		/// <summary>
+		/// ChangeSelection msg handler
+		/// </summary>
+		/// <param name='arguments'>
+		/// Arguments.
+		/// </param>
 		private void ChangeSelection (string arguments)
 		{
 			var selServ = this.host.GetService (typeof (ISelectionService)) as ISelectionService;
 			if (selServ == null)
 				throw new Exception ("Could not get selection from designer host");
 
+			// deserialize the arguments from the msg
 			SelectionChangedArguments args = DeserializeMessage<SelectionChangedArguments> (arguments);
 			List<IComponent> components = new List<IComponent> ();
 			foreach (string id in args.SelectedIds) {
@@ -92,12 +125,22 @@ namespace AspNetEdit.Editor.DesignerLink
 			selServ.SetSelectedComponents (components);
 		}
 
+		/// <description>
+		/// The expected structure of the JSON serialized object in a message
+		/// from the designer surface.
+		/// The MsgName contains the name of the type of the message.
+		/// Arguments contains another JSON string which is deserialized
+		/// to an objet of type depeneding on the the MsgName.
+		/// </description>
 		private class BasicMessage
 		{
 			public string MsgName { get; set; }
 			public string Arguments { get; set; }
 		}
 
+		/// <description>
+		/// Arguments class for messages of the type "selection_changed"
+		/// </description>
 		private class SelectionChangedArguments
 		{
 			// index of the primary selection elementt
@@ -105,6 +148,9 @@ namespace AspNetEdit.Editor.DesignerLink
 			public string[] SelectedIds { get; set; }
 		}
 
+		/// <description>
+		/// Arguments class for messages of the type "context_menu_request"
+		/// </description>
 		private class ContextMenuArgs
 		{
 			public int X { get; set; }
