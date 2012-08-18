@@ -20,8 +20,6 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-
-
 using System;
 using System.ComponentModel.Design;
 using System.ComponentModel;
@@ -42,24 +40,27 @@ namespace AspNetEdit.Editor.UI
 	{
 		DesignerHost host;
 		bool active = false;
+
+		/// <summary>
+		/// An absolute uri to the project's directory.
+		/// When passed to the WebView.LoadString method, the files in the document
+		/// that are linked to files in the directory can handled properly by the WebView
+		/// </summary>
 		string baseUri;
+
+		/// <summary>
+		/// The designer context.
+		/// </summary>
+		/// <description>
+		/// the designer context is a string of <link> and <script> tags that link to
+		/// javascript and css files in the instalation directory of the addin.
+		/// They make the WebKit.WebView act as a designer surface, which sends
+		/// messages to the C# backend and has specific stiles for the design-time
+		/// components.
+		/// </description>
 		string designerContext;
 		DesignerMessageManager msgManager;
 		ContextMenu menu;
-		
-		// dodev: To be tested with WebKit
-		//there's weird bug where a second Gecko instance *can't* be created
-		//so until it's fixed we reuse share one instance
-		//TODO: make it so we can have more than one shown at the same time
-//		public static RootDesignerView instance = null;
-//		
-//		public static RootDesignerView GetInstance (IDesignerHost host)
-//		{
-//			if (instance == null)
-//				instance = new RootDesignerView (host);
-//			instance.active = false;
-//			return instance;
-//		}
 
 		public RootDesignerView (IDesignerHost host)
 			: base()
@@ -83,6 +84,12 @@ namespace AspNetEdit.Editor.UI
 			get { return menu; }
 		}
 
+		/// <summary>
+		/// Inits the properties.
+		/// </summary>
+		/// <description>
+		/// Generates the designer context and the base uri, depening on the os platform the designer is being used
+		/// </description>
 		public void InitProperties ()
 		{
 			// setting the baseUri to the project's root
@@ -133,16 +140,47 @@ namespace AspNetEdit.Editor.UI
 
 		#region WebView Communication
 	
+		/// <summary>
+		/// Loads the document in designer.
+		/// </summary>
+		/// <param name='htmlDocument'>
+		/// Html document.
+		/// </param>
+		/// <description>
+		/// Loads a html string in the WebView for displaying.
+		/// The mime_type and encoding parameters are left null, so that their default values will be used
+		/// </description>
 		public void LoadDocumentInDesigner (string htmlDocument)
 		{
 			this.LoadString (htmlDocument, null, null, baseUri);
 		}
 
+		/// <summary>
+		/// Loads the document in designer.
+		/// </summary>
+		/// <param name='htmlDocument'>
+		/// Html document.
+		/// </param>
+		/// <param name='encoding'>
+		/// Encoding.
+		/// </param>
+		/// <description>
+		/// The document is loaded in the document with the provided character encoding.
+		/// </description>
+		/// TODO: track the encoding set by the user
 		public void LoadDocumentInDesigner (string htmlDocument, string encoding)
 		{
 			this.LoadString (htmlDocument, null, encoding, baseUri);
 		}
 
+		/// <summary>
+		/// Handles changes in the <title> tag of the WebView
+		/// </summary>
+		/// <description>
+		/// Waits for changes in the title and passes them for processing and deserialization
+		/// to the message manager. This method is the link between the designer surface and the
+		/// C# backend of the designer.
+		/// </description>
 		void WebView_OnTitleChanged (object o, WebKit.TitleChangedArgs args)
 		{
 			try {
