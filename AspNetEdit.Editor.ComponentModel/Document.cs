@@ -3,29 +3,22 @@
 * 
 * Authors: 
 *  Michael Hutchinson <m.j.hutchinson@gmail.com>
+*  Petar Dodev <petar.dodev@gmail.com>
 *  
 * Copyright (C) 2005 Michael Hutchinson
+* Copyright (C) 2012 Petar Dodev
 *
-* This sourcecode is licenced under The MIT License:
-* 
-* Permission is hereby granted, free of charge, to any person obtaining
-* a copy of this software and associated documentation files (the
-* "Software"), to deal in the Software without restriction, including
-* without limitation the rights to use, copy, modify, merge, publish,
-* distribute, sublicense, and/or sell copies of the Software, and to permit
-* persons to whom the Software is furnished to do so, subject to the
-* following conditions:
-* 
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
 *
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-* OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-* NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-* DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-* OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-* USE OR OTHER DEALINGS IN THE SOFTWARE.
+*	http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
 */
 
 using System;
@@ -67,6 +60,9 @@ namespace AspNetEdit.Editor.ComponentModel
 		private Control parent;
 		private DesignerHost host;
 
+		// the TextEditor instance of the Source code view
+		// all changes made in the designer are directly serialized
+		// to text editor contents
 		ExtensibleTextEditor textEditor;
 
 		// undo/redo wrapper of the SourceEditorView's funcitionality 
@@ -75,7 +71,7 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		// notes when the content of the textEditor doesn't match the content of the XDocument
 		bool txtDocDirty;
-		// do not serialize the document to HTML
+		// should the the Changed event be fired
 		bool suppressSerialization;
 		// blocks threads from parsing the document when it been edited
 		ManualResetEvent updateEditorContent;
@@ -94,12 +90,14 @@ namespace AspNetEdit.Editor.ComponentModel
 		{
 			initDocument (parent, host);
 		}
-		
+
 		private void initDocument (Control parent, DesignerHost host)
 		{
-			textEditor = MonoDevelop.Ide.IdeApp.Workbench.ActiveDocument.PrimaryView.GetContent<SourceEditorView> ().TextEditor;
-
 			System.Diagnostics.Trace.WriteLine ("Creating document...");
+
+			// get the ExtensibleTextEditor instance of the Source code's view
+			textEditor = IdeApp.Workbench.ActiveDocument.PrimaryView.GetContent<SourceEditorView> ().TextEditor;
+
 			if (!(parent is WebFormPage))
 				throw new NotImplementedException ("Only WebFormsPages can have a document for now");
 			this.parent = parent;
@@ -111,6 +109,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			directives = new Hashtable (StringComparer.InvariantCultureIgnoreCase);
 			txtDocDirty = true;
 			suppressSerialization = false;
+			// create and set the event, to let the parser run the first time
 			updateEditorContent = new ManualResetEvent (true);
 			undoTracker = new UndoTracker ();
 			undoHandler = IdeApp.Workbench.ActiveDocument.PrimaryView.GetContent <IUndoHandler> ();
@@ -118,6 +117,13 @@ namespace AspNetEdit.Editor.ComponentModel
 				throw new NullReferenceException ("Could not obtain the IUndoHandler from the SourceEditorView");
 		}
 
+		/// <summary>
+		/// Inits the controls list and the directives hashtable
+		/// </summary>
+		/// <description>
+		/// This method runs only during the first load of the document.
+		/// Then, controls and directives are pesisted using the add/remove/edit methods.
+		/// </description>
 		public void InitControlsAndDirectives ()
 		{
 			// check the document for directives
@@ -129,6 +135,15 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		#region Event firing control
 
+		/// <summary>
+		/// Gets or sets a value indicating whether this <see cref="AspNetEdit.Editor.ComponentModel.Document"/> text document dirty.
+		/// </summary>
+		/// <value>
+		/// <c>true</c> if text document dirty; otherwise, <c>false</c>.
+		/// </value>
+		/// <remarks>
+		/// fires the Changed event when set to true
+		/// </remarks>
 		bool TxtDocDirty {
 			set {
 				txtDocDirty = value;
@@ -140,12 +155,13 @@ namespace AspNetEdit.Editor.ComponentModel
 			get { return txtDocDirty; }
 		}
 
+		// do not fire the Changed event
 		public void WaitForChanges ()
 		{
 			suppressSerialization = true;
-			//pendingChanges.Reset ();
 		}
 
+		// fire the Changed event
 		public void CommitChanges ()
 		{
 			suppressSerialization = false;
@@ -157,7 +173,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		#region StateEngine parser
 
 		/// <summary>
-		/// Parse the TextEditor.Text document and tracks the txtDocDirty flag.
+		/// Gets the parsed document from the background parser
 		/// </summary>
 		public AspNetParsedDocument Parse ()
 		{
@@ -170,6 +186,15 @@ namespace AspNetEdit.Editor.ComponentModel
 			return IdeApp.Workbench.ActiveDocument.ParsedDocument as AspNetParsedDocument;
 		}
 
+		/// <summary>
+		/// Parses a given string
+		/// </summary>
+		/// <param name='doc'>
+		/// ASP.NET document
+		/// </param>
+		/// <param name='fileName'>
+		/// File name.
+		/// </param>
 		AspNetParsedDocument Parse (string doc, string fileName)
 		{
 			AspNetParsedDocument parsedDoc = null;
@@ -180,7 +205,9 @@ namespace AspNetEdit.Editor.ComponentModel
 			return parsedDoc;
 		}
 
-
+		/// <summary>
+		/// Checks the document for directives and adds them to the directives hashtable
+		/// </summary>
 		void ParseDirectives ()
 		{
 			var doc = Parse ();
@@ -197,46 +224,54 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		/// <summary>
 		/// Checks the document for control tags, creates components and adds the to the IContainer.
-		/// Adds id attributes to tags that are server controls but doesn't have it.
+		/// Adds an id attributes to tags that are server controls but doesn't have an id attribute.
 		/// </summary>
 		void ParseControls ()
 		{
 			// no need to serialize the document, if we add just an id attribute to a control
 			suppressSerialization = true;
 
-			// the method check for control may change the document
+			// if an id tag was added the document changes
 			// so we parse the document each time it does
 			do {
+				// get a fresh new AspNetParsedDocument
 				var doc = Parse ();
 
+				// go through all the nodes of the document
 				foreach (XNode node in doc.XDocument.RootElement.AllDescendentElements) {
+					// if a node is not a XElement, no need to check if it's a control
 					if (!(node is XElement))
 						continue;
 		
 					var element = node as XElement;
 		
+					// the controls have a tag prefix or runat="server" attribute
 					if (element.Name.HasPrefix || XDocumentHelper.IsRunAtServer (element)) {
 						string id = XDocumentHelper.GetAttributeValueCI (element.Attributes, "id");
 		
 						// check the DesignContainer if a component for that node already exists
 						if (host.GetComponent(id) == null) {
+							// create a component of type depending of the element
 							IComponent comp = ProcessControl (element);
 
 							if (comp == null)
 								continue;
 	
-							// add id to the component, for later recognition if it has not ID
+							// add id to the component, for later recognition if it has no ID attribute
 							if (String.IsNullOrEmpty(id)) {
 								var nameServ = host.GetService (typeof (INameCreationService)) as INameCreationService;
 								if (nameServ == null)
 									throw new Exception ("Could not obtain INameCreationService from the DesignerHost.");
 
+								// insert the attribute to the element
 								host.AspNetSerializer.SetAttribtue (element, "id", nameServ.CreateName (host.Container, comp.GetType ()));
 								updateEditorContent.WaitOne (); // wait until the changes have been applied to the document
 								break;
 							}
 
+							// we have a control component, add it to the container
 							this.host.Container.Add (comp, id);
+							// and parse its attributes for component properties
 							ProcessControlProperties (element, comp);
 						}
 					}
@@ -246,6 +281,15 @@ namespace AspNetEdit.Editor.ComponentModel
 			suppressSerialization = false;
 		}
 
+		/// <summary>
+		/// Creates a component for a given XElement
+		/// </summary>
+		/// <returns>
+		/// The control.
+		/// </returns>
+		/// <param name='element'>
+		/// The IComponent if the element was a ASP.NET or HTML control, and null if it wasn't
+		/// </param>
 		private IComponent ProcessControl (XElement element)
 		{
 			// get the control's Type
@@ -286,9 +330,13 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		/// <summary>
 		/// Parses the control's tag and sets the properties of the corresponding component
-		/// + checking and setting to default value, the properties which are not explicitly set
-		/// in the ASP.NET code
 		/// </summary>
+		/// <description>
+		/// Parses the control's tag's attributes and sets the component's properties.
+		/// The method can filter all the properties which are not explicitly set as attributes
+		/// and set them to their default value. That functionality is useful when an undo 
+		/// is performed and we have to revert the component's stage.
+		/// </description>
 		/// <param name='element'>
 		/// The ASP.NET tag
 		/// </param>
@@ -308,6 +356,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				containerControl.InnerHtml = GetTextFromEditor (element.Region.End, element.ClosingTag.Region.Begin);
 			}
 
+			// get only the properties that can be browsed through the property grid and that are not read-only
 			Attribute[] filter = new Attribute[] { BrowsableAttribute.Yes, ReadOnlyAttribute.No };
 			PropertyDescriptorCollection pCollection = TypeDescriptor.GetProperties (component.GetType (), filter);
 			PropertyDescriptor desc = null;
@@ -323,9 +372,11 @@ namespace AspNetEdit.Editor.ComponentModel
 					if (iebs == null)
 						throw new Exception ("Could not obtain IEventBindingService from host");
 
+					// remove the "on" prefix from the attribute's name
 					string eventName = attr.Name.Name.Remove (0, 2);
-					evDesc = eCollection.Find (eventName, true);
 
+					// try to find an event descriptor with that name
+					evDesc = eCollection.Find (eventName, true);
 					if (evDesc != null)
 						desc = iebs.GetEventProperty (evDesc);
 				}
@@ -336,19 +387,21 @@ namespace AspNetEdit.Editor.ComponentModel
 
 				desc.SetValue (component, desc.Converter.ConvertFromString (attr.Value));
 
-				// add it to the properties that are defined in asp.net code
+				// add the descriptor to the properties which are defined in the tag
 				if (checkForDefaults)
 					explicitDeclarations.Add (desc);
 			}
 
-			// find properties not defined as attributes in the element and set them to the default value
+			// find properties not defined as attributes in the element's tag and set them to the default value
 			if (checkForDefaults) {
+				// go through all the properties in the collection
 				foreach (PropertyDescriptor pDesc in pCollection) {
+					// the property is explicitly defined in the contrl's tag. skip it
 					if (explicitDeclarations.Contains (pDesc))
 						continue;
 
+					// check if the component has it's default value. if yes - skip it
 					object currVal = pDesc.GetValue (component);
-
 					if (pDesc.Attributes.Contains (new DefaultValueAttribute (currVal)))
 						continue;
 
@@ -370,12 +423,26 @@ namespace AspNetEdit.Editor.ComponentModel
 							defVal = pDesc.Converter.ConvertFromString ((string)defVal);
 						}
 					}
-						
+
+					// finally, set the default value to the property
 					pDesc.SetValue (component, defVal);
 				}
 			}
 		}
 
+		/// <summary>
+		/// Parses a list control tag for it's ListItems.
+		/// </summary>
+		/// <description>
+		/// Parses the tag for child ListItem tags and adds the to the
+		/// component's Items list.
+		/// </description>
+		/// <param name='lControl'>
+		/// the ListControl's component
+		/// </param>
+		/// <param name='tag'>
+		/// the ListControl's tag
+		/// </param>
 		void ParseListItems (ListControl lControl, XElement tag)
 		{
 			string text, value, innerHtml, textPropery, valuePropery;
@@ -385,11 +452,13 @@ namespace AspNetEdit.Editor.ComponentModel
 				if (el.Name.Name.ToLower () != "listitem")
 					continue;
 
+				// getting all the set properties of the element and the innerHTML
 				text = value = innerHtml = String.Empty;
 				textPropery = valuePropery = String.Empty;
 				selected = false;
 				enabled = true;
 
+				// check the attributes
 				foreach (XAttribute attr in el.Attributes) {
 					switch (attr.Name.Name.ToLower ()) {
 					case "text":
@@ -407,9 +476,14 @@ namespace AspNetEdit.Editor.ComponentModel
 					}
 				}
 
+				// and get the innerHTML if it's not a selfclosing tag
 				if (!el.IsSelfClosing)
 					innerHtml = GetTextFromEditor (el.Region.End, el.ClosingTag.Region.Begin);
 
+				// the list item has 4 posible ways of setting it's value property
+				// depending on it's attributes and innerHTML
+
+				// set the textProperty
 				if (!String.IsNullOrEmpty (innerHtml))
 					textPropery = innerHtml;
 				else if (!String.IsNullOrEmpty (text))
@@ -417,6 +491,7 @@ namespace AspNetEdit.Editor.ComponentModel
 				else if (!String.IsNullOrEmpty (value))
 					textPropery = value;
 
+				// set the valueProperty
 				if (!String.IsNullOrEmpty (value))
 					valuePropery = value;
 				else if (!String.IsNullOrEmpty (innerHtml))
@@ -424,13 +499,18 @@ namespace AspNetEdit.Editor.ComponentModel
 				else if (!String.IsNullOrEmpty (text))
 					valuePropery = text;
 
+				// create the ListItem with the text, value and enabled properties
 				ListItem li = new ListItem (textPropery, valuePropery, enabled);
+				// set the item as the selected one if it's a selected attribute
 				li.Selected = selected;
+				// and add them to the component's items list
 				lControl.Items.Add (li);
 			}
 		}
 
-		//static string[] htmlControlTags = {"a", "button", "input", "img", "select", "textarea"};
+		/// <summary>
+		/// Dict with the attribute names as key and their Type as value
+		/// </summary>
 		static Dictionary<string, Type> htmlControlTags = new Dictionary<string, Type> () {
 			{"a", typeof (HtmlAnchor)},
 			{"button", typeof (HtmlButton)},
@@ -440,16 +520,28 @@ namespace AspNetEdit.Editor.ComponentModel
 			{"textarea", typeof (HtmlTextArea)}
 		};
 
+		/// <summary>
+		/// Gets the type of the html control.
+		/// </summary>
+		/// <returns>
+		/// The html control type.
+		/// </returns>
+		/// <param name='el'>
+		/// The supposed html control's tag XElement
+		/// </param>
 		private Type GetHtmlControlType (XElement el)
 		{
+			// query the htmlControlTags dict for the type
 			string nameLowered = el.Name.Name.ToLower ();
 			if (!htmlControlTags.ContainsKey (nameLowered))
 				return null;
 
 			Type compType = htmlControlTags[nameLowered];
-			// we have an input tag
+			// for the input tag we have different types depending on the type attribute
+			// so in the dict its type is marked with null
 			if (compType == null) {
 				string typeAttr = XDocumentHelper.GetAttributeValueCI (el.Attributes, "type");
+				// get the Type depending on the type attribute
 				switch (typeAttr.ToLower ()) {
 				case "button":
 					compType = typeof (HtmlInputButton);
@@ -488,8 +580,7 @@ namespace AspNetEdit.Editor.ComponentModel
 		}
 
 		/// <summary>
-		/// Check if the state of all the components in the container matches
-		/// their the that defined in their elements attributes
+		/// Persist the container's controls list matches the tag's attributes' state
 		/// </summary>
 		public void PersistControls ()
 		{
@@ -507,16 +598,20 @@ namespace AspNetEdit.Editor.ComponentModel
 					bool checkDefaults;
 					IComponent comp = host.GetComponent(id);
 					if (comp == null) {
-						// adding a new component
+						// the tag does not have a matching component in the
+						// container so create one
 						comp = ProcessControl (element);
 
 						if (comp == null)
 							continue;
 
-						// assuming that we have an id already
+						// assuming that we have an id already from the initial controls parse
 						host.Container.Add (comp, id);
+
+						// no need to check for defaults as we have a new component
 						checkDefaults = false;
 					} else {
+						// check if the tag's attributes and the component's attributes match
 						checkDefaults = true;
 					}
 
@@ -529,13 +624,24 @@ namespace AspNetEdit.Editor.ComponentModel
 		
 		#region Designer communication
 
+		/// <summary>
+		/// fired on changing the text in the TextEditor
+		/// </summary>
 		public event EventHandler Changing;
+		/// <summary>
+		/// fired when applying changes to the text is finished
+		/// </summary>
 		public event EventHandler Changed;
+		/// <summary>
+		/// Occurs when a undo or redo action in the TextEditor was finished
+		/// </summary>
 		public event EventHandler UndoRedo;
 
 		public void OnChanged ()
 		{
-
+			// check if should really fire that event i.e. - variables flag for
+			// suppressing the serialization which is subscribed to that event
+			// or no changes were made to the text document
 			if ((Changed != null) && !suppressSerialization && txtDocDirty)
 				Changed (this, EventArgs.Empty);
 		}
@@ -556,11 +662,41 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		#region TextEditor manipulation
 
+		/// <summary>
+		/// Gets text string from the textEditor between the provided TextLocations.
+		/// </summary>
+		/// <returns>
+		/// The text from editor.
+		/// </returns>
+		/// <param name='start'>
+		/// Start.
+		/// </param>
+		/// <param name='end'>
+		/// End.
+		/// </param>
 		public string GetTextFromEditor (TextLocation start, TextLocation end)
 		{
 			return GetTextFromEditor (start.Line, start.Column, end.Line, end.Column);
 		}
 
+		/// <summary>
+		/// Gets text string from the textEditor between the provided text coordinates.
+		/// </summary>
+		/// <returns>
+		/// The text from editor.
+		/// </returns>
+		/// <param name='startLine'>
+		/// Start line.
+		/// </param>
+		/// <param name='startColumn'>
+		/// Start column.
+		/// </param>
+		/// <param name='endLine'>
+		/// End line.
+		/// </param>
+		/// <param name='endColumn'>
+		/// End column.
+		/// </param>
 		public string GetTextFromEditor (int startLine, int startColumn, int endLine, int endColumn)
 		{
 			if (textEditor == null)
@@ -569,6 +705,15 @@ namespace AspNetEdit.Editor.ComponentModel
 			return textEditor.GetTextBetween (startLine, startColumn, endLine, endColumn);
 		}
 
+		/// <summary>
+		/// Replaces a text string in the editor with the newValue in the provided region
+		/// </summary>
+		/// <param name='region'>
+		/// Region.
+		/// </param>
+		/// <param name='newValue'>
+		/// New value.
+		/// </param>
 		public void ReplaceText (DomRegion region, string newValue)
 		{
 			if (MonoDevelop.Ide.DispatchService.IsGuiThread)
@@ -591,6 +736,7 @@ namespace AspNetEdit.Editor.ComponentModel
 			textEditor.SetCaretTo (region.BeginLine, region.BeginColumn);
 			textEditor.Replace (textEditor.Caret.Offset, GetTextFromEditor (region.Begin, region.End).Length, newValue);
 
+			// let the undo tracker know that an action was finished in the source editor
 			undoTracker.FinishAction ();
 
 			// let the parser know that the content is dirty and set the event
@@ -598,6 +744,12 @@ namespace AspNetEdit.Editor.ComponentModel
 			updateEditorContent.Set ();
 		}
 
+		/// <summary>
+		/// Removes the text in the provided DomRegion
+		/// </summary>
+		/// <param name='region'>
+		/// Region.
+		/// </param>
 		public void RemoveText (DomRegion region)
 		{
 			if (MonoDevelop.Ide.DispatchService.IsGuiThread)
@@ -624,6 +776,15 @@ namespace AspNetEdit.Editor.ComponentModel
 			updateEditorContent.Set ();
 		}
 
+		/// <summary>
+		/// Inserts a string in the sourcecode editor at TextLocation loc.
+		/// </summary>
+		/// <param name='loc'>
+		/// Location.
+		/// </param>
+		/// <param name='text'>
+		/// Text.
+		/// </param>
 		public void InsertText (TextLocation loc, string text)
 		{
 			if (MonoDevelop.Ide.DispatchService.IsGuiThread)
@@ -655,6 +816,9 @@ namespace AspNetEdit.Editor.ComponentModel
 
 		#region Undo/Redo wrapper
 
+		/// <summary>
+		/// Perform an undo in the sourcecode editor.
+		/// </summary>
 		public void Undo ()
 		{
 			if (undoTracker.CanUndo) {
@@ -665,6 +829,9 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
+		/// <summary>
+		/// Perform an redo in the sourcecode editor.
+		/// </summary>
 		public void Redo ()
 		{
 			if (undoTracker.CanRedo) {
@@ -675,11 +842,23 @@ namespace AspNetEdit.Editor.ComponentModel
 			}
 		}
 
+		/// <summary>
+		/// Queries the undo tracker if undo can be performed
+		/// </summary>
+		/// <returns>
+		/// <c>true</c> if we can perform an undo in the source editor; otherwise, <c>false</c>.
+		/// </returns>
 		public bool CanUndo ()
 		{
 			return undoTracker.CanUndo;
 		}
 
+		/// <summary>
+		/// Queries the undo tracker if redo can be performed
+		/// </summary>
+		/// <returns>
+		/// <c>true</c> if we can perform an redo in the source editor; otherwise, <c>false</c>.
+		/// </returns>
 		public bool CanRedo ()
 		{
 			return undoTracker.CanRedo;
