@@ -44,6 +44,17 @@ namespace AspNetEdit.Editor.ComponentModel
 	{
 		DesignerHost host;
 		Document document;
+
+		/// <summary>
+		/// The designer context.
+		/// </summary>
+		/// <description>
+		/// the designer context is a string of <link> and <script> tags that link to
+		/// javascript and css files in the instalation directory of the addin.
+		/// They make the WebKit.WebView act as a designer surface, which sends
+		/// messages to the C# backend and has specific stiles for the design-time
+		/// components.
+		/// </description>
 		string designerContext;
 
 		public DocumentSerializer (DesignerHost hst)
@@ -54,11 +65,30 @@ namespace AspNetEdit.Editor.ComponentModel
 			//designerContext = ((host.GetDesigner (host.RootComponent) as RootDesigner).GetView (ViewTechnology.Default) as RootDesignerView).DesignerContext;
 		}
 
+		/// <summary>
+		/// Sets the designer context.
+		/// </summary>
+		/// <param name='desCtx'>
+		/// The designer context string.
+		/// </param>
 		public void SetDesignerContext (string desCtx)
 		{
 			designerContext = desCtx;
 		}
 
+		/// <summary>
+		/// Gets the designable html.
+		/// </summary>
+		/// <description>
+		/// Generates HTML string to be displayed in the RootDesignerView's WebView.
+		/// It contains the designer context in the <head> tag and the init params
+		/// in the beginning of the <body> tag.
+		/// Also all the ASP.NET and HTML controls are rendered with their HTML representations
+		/// to be displayed the way they're going to look to the user.
+		/// </description>
+		/// <returns>
+		/// The designable html string.
+		/// </returns>
 		public string GetDesignableHtml ()
 		{
 			var parsedDoc = document.Parse () as AspNetParsedDocument;
@@ -68,8 +98,18 @@ namespace AspNetEdit.Editor.ComponentModel
 			return sb.ToString ();
 		}
 
+		// used to track where is the end of the previous tag
 		TextLocation prevTagLocation = TextLocation.Empty;
 
+		/// <summary>
+		/// Serializes a XNode to a HTML tag. This is a recursive method.
+		/// </summary>
+		/// <param name='node'>
+		/// Node.
+		/// </param>
+		/// <param name='sb'>
+		/// A string builder instance.
+		/// </param>
 		void SerializeNode (XNode node, StringBuilder sb)
 		{
 			prevTagLocation = node.Region.End;
