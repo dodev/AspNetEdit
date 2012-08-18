@@ -103,6 +103,8 @@ namespace AspNetEdit.Editor.UI
 
 			// the designer context is stored in the assembly's directory
 			// TODO: Copy the designer_context dir into the assembly directory, when building the addin
+			// for a copy or a link to the designer_context dir should be placed in the build or install
+			// directory of the addin.
 			string designerDir = System.IO.Path.Combine (
 				System.IO.Path.GetDirectoryName (System.Reflection.Assembly.GetExecutingAssembly ().Location),
 				"designer_context"

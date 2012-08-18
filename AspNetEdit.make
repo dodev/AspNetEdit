@@ -28,8 +28,8 @@ BUILD_DIR = build
 
 endif
 
-extension_name = aspdesigner
-extension_jar = $(shell pwd)/$(BUILD_DIR)/$(extension_name).jar
+#extension_name = aspdesigner
+#extension_jar = $(shell pwd)/$(BUILD_DIR)/$(extension_name).jar
 
 FILES =  \
 	AspNetEdit.Editor.ComponentModel/DesignContainer.cs \
@@ -69,17 +69,17 @@ DATA_FILES =
 RESOURCES = AspNetEdit.addin.xml
 
 EXTRAS = \
-	chrome/install.rdf \
-	chrome/README \
-	chrome/content/aspdesigner/aspdesigner.xul \
-	chrome/content/aspdesigner/clipboard.js \
-	chrome/content/aspdesigner/constants.js \
-	chrome/content/aspdesigner/contents.rdf \
-	chrome/content/aspdesigner/editor.js \
-	chrome/content/aspdesigner/editorContent.css \
-	chrome/content/aspdesigner/JSCall.js \
-	chrome/content/aspdesigner/xpcom.js \
-	chrome/locale/en-US/aspdesigner/contents.rdf \
+#	chrome/install.rdf \
+#	chrome/README \
+#	chrome/content/aspdesigner/aspdesigner.xul \
+#	chrome/content/aspdesigner/clipboard.js \
+#	chrome/content/aspdesigner/constants.js \
+#	chrome/content/aspdesigner/contents.rdf \
+#	chrome/content/aspdesigner/editor.js \
+#	chrome/content/aspdesigner/editorContent.css \
+#	chrome/content/aspdesigner/JSCall.js \
+#	chrome/content/aspdesigner/xpcom.js \
+#	chrome/locale/en-US/aspdesigner/contents.rdf \
 	ChangeLog
 
 REFERENCES =  \
@@ -99,27 +99,27 @@ REFERENCES =  \
 
 DLL_REFERENCES = 
 
-CLEANFILES += $(extension_jar)
+#CLEANFILES += $(extension_jar)
 
 INSTALL_DIR = $(prefix)/lib/monodevelop/AddIns/AspNetEdit
 
 ## actually all in $(srcdir)/chrome, but we handle this later
 ## need to handle paths this way to get gorrect paths in the zip
-jar_files = \
-	content/aspdesigner/contents.rdf \
-	content/aspdesigner/aspdesigner.xul \
-	content/aspdesigner/editorContent.css \
-	content/aspdesigner/editor.js \
-	content/aspdesigner/clipboard.js \
-	content/aspdesigner/constants.js \
-	content/aspdesigner/xpcom.js \
-	content/aspdesigner/JSCall.js \
-	locale/en-US/aspdesigner/contents.rdf
+#jar_files = \
+#	content/aspdesigner/contents.rdf \
+#	content/aspdesigner/aspdesigner.xul \
+#	content/aspdesigner/editorContent.css \
+#	content/aspdesigner/editor.js \
+#	content/aspdesigner/clipboard.js \
+#	content/aspdesigner/constants.js \
+#	content/aspdesigner/xpcom.js \
+#	content/aspdesigner/JSCall.js \
+#	locale/en-US/aspdesigner/contents.rdf
 
 
 #Targets
 
-all-local: $(ASSEMBLY) $(extension_jar) $(top_srcdir)/config.make
+all-local: $(ASSEMBLY) $(top_srcdir)/config.make
 
 LOCAL_PKGCONFIG=PKG_CONFIG_PATH=../../local-config:$$PKG_CONFIG_PATH
 
@@ -132,16 +132,16 @@ $(ASSEMBLY) $(ASSEMBLY_MDB): $(build_sources) $(build_resources) $(build_datafil
 	make post-all-local-hook prefix=$(prefix)
 
 
-$(extension_jar): $(foreach f, $(jar_files), $(srcdir)/chrome/$f)
-	cd $(srcdir)/chrome; zip -q9 $@ $(jar_files)
+#$(extension_jar): $(foreach f, $(jar_files), $(srcdir)/chrome/$f)
+#	cd $(srcdir)/chrome; zip -q9 $@ $(jar_files)
 
-install-local: $(ASSEMBLY) $(ASSEMBLY_MDB) $(extension_jar)
+install-local: $(ASSEMBLY) $(ASSEMBLY_MDB)
 	make pre-install-local-hook prefix=$(prefix)
 	mkdir -p $(INSTALL_DIR)
-	cp $(ASSEMBLY) $(ASSEMBLY_MDB) $(extension_jar) $(INSTALL_DIR)
+    # cp $(ASSEMBLY) $(ASSEMBLY_MDB) $(extension_jar) $(INSTALL_DIR)
 	make post-install-local-hook prefix=$(prefix)
 
-uninstall-local: $(ASSEMBLY) $(ASSEMBLY_MDB) $(extension_jar)
+uninstall-local: $(ASSEMBLY) $(ASSEMBLY_MDB)
 	make pre-uninstall-local-hook prefix=$(prefix)
 	rm -f $(INSTALL_DIR)/$(notdir $(ASSEMBLY))
 	test -z '$(ASSEMBLY_MDB)' || rm -f $(INSTALL_DIR)/$(notdir $(ASSEMBLY_MDB))
