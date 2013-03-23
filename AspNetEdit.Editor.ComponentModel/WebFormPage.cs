@@ -38,12 +38,12 @@ using System.Web.Compilation;
 using System.Collections;
 using System.Web.UI;
 using System.ComponentModel.Design;
-using AspNetEdit.Editor.Persistence;
+//using AspNetEdit.Editor.Persistence;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
-	internal class WebFormPage : System.Web.UI.Page
-	{
+	internal class WebFormPage : System.Web.UI.TemplateControl // System.Web.UI.Page - requires http request + serside head
+	{															// The fix is temporary, just to show basic properties in the propgrid
 		//private HttpRequest httpRequest;
 		
 		public WebFormPage ()
@@ -61,9 +61,9 @@ namespace AspNetEdit.Editor.ComponentModel
 		}
 
 		//FIXME: enforce this...
-		public override void VerifyRenderingInServerForm (Control control)
-		{
-		}
+//		public override void VerifyRenderingInServerForm (Control control)
+//		{
+//		}
 
 		#region Property browser -> page directive linkage
 

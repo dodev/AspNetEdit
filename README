@@ -1,0 +1,54 @@
+
+	DESCRIPTION
+****************************
+
+ AspNetEdit is an Add-in for MonoDevelop. It adds the functionality for 
+developing ASP.NET WebForms in WYSIWYG fashion. The visual editor is based on
+the WebKit rendering engine and it's C#-wrapper - WebKit#.
+
+
+	CONTENTS
+****************************
+ What can you expect in the different folders:
+* AspNetEdit.Editor/ - The editor host and other classes that binds the editor 
+together
+* AspNetEdit.Editor.ComponentModel/ - Implementation of the
+System.ComponentModel.Design architecture
+* AspNetEdit.Editor.DesignerLink/ - The C#/WebKit# glue layer
+* AspNetEdit.Editor.UI/ - The visual modules of the editor
+* AspNetEdit.Integration/ - Classes that implement different extension points
+of MonoDevelop
+* AspNetEdit.Tools/ - Collection of classes that are used across the addin
+* designer_context/ - The javascript and css files loaded besides the user
+document that make the visual representation editable.
+
+
+	INSTALATION
+****************************
+ The addin can be build using the MonoDevelops profiles configuration:
+1) Create a file in monodevelop/profiles with a name of your choice.
+
+2) Add the following lines to the file:
+main
+extras/AspNetEdit
+
+3) Run the configure script with the following parameter:
+$ ./configure --profile=<the_name_you_gave_to_the_file>
+
+4) If the config passes successfully just run:
+$ make
+# make run
+or
+# make install
+depending on what you are trying to achieve
+
+5) Create a WebForms project and you should be able to select a tab called 
+"Designer" for the .aspx files.
+
+
+	NOTES
+****************************
+ The editor is still not ready for general usage, although it works pretty
+stable. It can edit/remove controls, but dragging controls from the toolbox
+is to be implemented.
+

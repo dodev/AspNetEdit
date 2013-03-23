@@ -1,34 +1,26 @@
- /* 
- * DesignerHost.cs - IDesignerHost implementation. Designer transactions
- *  and service host. One level up from DesignContainer, tracks RootComponent. 
- * 
- * Authors: 
- *  Michael Hutchinson <m.j.hutchinson@gmail.com>
- *  
- * Copyright (C) 2005 Michael Hutchinson
- *
- * This sourcecode is licenced under The MIT License:
- * 
- * Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to permit
- * persons to whom the Software is furnished to do so, subject to the
- * following conditions:
- * 
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
- * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
- * NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
- * USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
+/* 
+* DesignerHost.cs - IDesignerHost implementation. Designer transactions
+*  and service host. One level up from DesignContainer, tracks RootComponent. 
+*
+* Authors: 
+*  Michael Hutchinson <m.j.hutchinson@gmail.com>
+*  Petar Dodev <petar.dodev@gmail.com>
+*
+* Copyright (C) 2005 Michael Hutchinson
+* Copyright (C) 2012 Petar Dodev
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*	http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
 using System;
 using System.ComponentModel;
 using System.ComponentModel.Design;
@@ -38,30 +30,28 @@ using System.Drawing.Design;
 using System.IO;
 using System.Web.UI;
 using System.Web.UI.Design;
-using AspNetEdit.Editor.Persistence;
+
+using MonoDevelop.SourceEditor;
+using MonoDevelop.AspNet;
+using MonoDevelop.AspNet.Parser;
 
 namespace AspNetEdit.Editor.ComponentModel
 {
 	public class DesignerHost : IDesignerHost, IDisposable
 	{
 		private ServiceContainer parentServices;
-		private WebFormReferenceManager referenceManager;
+		EditorHost editorHost;
 
-		public DesignerHost (ServiceContainer parentServices)
+		public DesignerHost (ServiceContainer parentServices, EditorHost host)
 		{
 			this.parentServices = parentServices;
 			container = new DesignContainer (this);
-			referenceManager = new WebFormReferenceManager (this);
 
 			//register services
 			parentServices.AddService (typeof (IDesignerHost), this);
 			parentServices.AddService (typeof (IComponentChangeService), container);
-			parentServices.AddService (typeof (IWebFormReferenceManager), referenceManager);		
-		}
 
-		public WebFormReferenceManager WebFormReferenceManager
-		{
-			get { return referenceManager; }
+			editorHost = host;
 		}
 
 		#region Component management
@@ -69,10 +59,16 @@ namespace AspNetEdit.Editor.ComponentModel
 		private DesignContainer container;
 		private IComponent rootComponent = null;
 		private Document rootDocument;
+		private DocumentSerializer serializer;
+		private DesignerSerializer designerSerializer;
 
 		public IContainer Container
 		{
 			get { return container; }
+		}
+
+		public DesignerSerializer AspNetSerializer {
+			get { return designerSerializer; }
 		}
 		
 		public IComponent CreateComponent (Type componentClass, string name)
@@ -117,6 +113,11 @@ namespace AspNetEdit.Editor.ComponentModel
 		public IComponent CreateComponent (Type componentClass)
 		{
 			return CreateComponent (componentClass, null);
+		}
+
+		public IComponent GetComponent (string name)
+		{
+			return container.GetComponent (name);
 		}
 
 		public void DestroyComponent (IComponent component)
@@ -307,8 +308,217 @@ namespace AspNetEdit.Editor.ComponentModel
 			if (Deactivated != null)
 				Deactivated (this, EventArgs.Empty);
 		}
+		
+		public void NewFile ()
+		{
+			if (activated || RootComponent != null)
+				throw new InvalidOperationException ("You must reset the host before loading another file.");
+			loading = true;
 
-		#endregion 
+			this.Container.Add (new WebFormPage ());
+			this.rootDocument = new Document ((Control)rootComponent, this, "New Document");
+
+			loading = false;
+			OnLoadComplete ();
+		}
+
+//		public void Load (Stream file, string fileName)
+//		{
+//			using (TextReader reader = new StreamReader (file))
+//			{
+//				Load (reader.ReadToEnd (), fileName);
+//			}
+//		}
+		
+		public void LoadDocument ()
+		{
+			if (activated || RootComponent != null)
+				throw new InvalidOperationException ("You must reset the host before loading another file.");
+			loading = true;
+
+			this.Container.Add (new WebFormPage());
+			this.rootDocument = new Document ((Control)rootComponent, this);
+			//rootDocument.Changed += new EventHandler (Document_OnChanged);
+
+			serializer = new DocumentSerializer (this);
+			designerSerializer = new DesignerSerializer (this);
+
+			loading = false;
+			OnLoadComplete ();
+		}
+
+		public void Reset ()
+		{
+			//container automatically destroys all children when this happens
+			if (rootComponent != null)
+				DestroyComponent (rootComponent);
+
+			if (activated) {
+				OnDeactivated ();
+				this.activated = false;
+			}
+		}
+
+		#endregion
+
+		public void RootDesignerView_Realized (object o, EventArgs args)
+		{
+			System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(InitialSerialization));
+			serializerThread.Start ();
+		}
+
+		public void InitialSerialization ()
+		{
+			// check the document for controls and directives
+			RootDocument.InitControlsAndDirectives ();
+
+			// init the designer context tags, and find the absolute path to the current project
+			var view = editorHost.DesignerView as AspNetEdit.Editor.UI.RootDesignerView;
+			view.InitProperties ();
+
+			// pass the freshly generated designer context to the html serializer
+			serializer.SetDesignerContext (view.DesignerContext);
+
+			// serialize the document for displaying in the designer
+			SerializeDocument ();
+
+			// subscribe to changes in the component container
+			container.ComponentChanged += new ComponentChangedEventHandler (OnComponentUpdated);
+
+			// serialize when a transaction is closed
+			TransactionClosed += new DesignerTransactionCloseEventHandler (this_OnTransactionClosed);
+
+			// subscibe for undo or redo events
+			RootDocument.UndoRedo += document_OnUndoRedo;
+		}
+
+		public void this_OnTransactionClosed (object o, DesignerTransactionCloseEventArgs args)
+		{
+			if (args.TransactionCommitted && this.activated) {
+				System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(SerializeDocument));
+				serializerThread.Start ();
+			}
+		}
+
+		public void document_OnUndoRedo (object o, EventArgs evArgs)
+		{
+			System.Threading.Thread serializerThread = new System.Threading.Thread (new System.Threading.ThreadStart(SerializeDocumentHard));
+			serializerThread.Start ();
+		}
+
+		public void SerializeDocument ()
+		{
+   			string html = serializer.GetDesignableHtml ();
+
+			// fire the event
+			OnDocumentChanged (html);
+		}
+
+		/// <summary>
+		/// Serializes the document with re-checking the components for updated tags.
+		/// </summary>
+		public void SerializeDocumentHard ()
+		{
+			// unsubscribe for those events during the persisting of the document
+			container.ComponentChanged -= OnComponentUpdated;
+			TransactionClosed -= this_OnTransactionClosed;
+
+			RootDocument.PersistControls ();
+			string html = serializer.GetDesignableHtml ();
+			OnDocumentChanged (html);
+
+			container.ComponentChanged += OnComponentUpdated;
+			TransactionClosed += this_OnTransactionClosed;
+		}
+
+		public class DocumentChangedEventArgs: EventArgs
+		{
+			string html;
+
+			public DocumentChangedEventArgs (string newHtml) : base ()
+			{
+				html = newHtml;
+			}
+
+			public string Html {
+				get { return html; }
+			}
+		}
+
+		public delegate void DocumentChangedEventHandler (DocumentChangedEventArgs args);
+
+		public event DocumentChangedEventHandler DocumentChanged;
+
+		public void OnDocumentChanged (string newHtml)
+		{
+			if (DocumentChanged != null)
+				DocumentChanged (new DocumentChangedEventArgs (newHtml));
+		}
+
+		public void OnComponentUpdated (object o, ComponentChangedEventArgs args)
+		{
+			if (activated) {
+				// FIXME: a bug in ComponentChangedEventArgs - switches the return value of NewValue and OldValue
+				// workaround for the bug
+				// getting the new value directly from the component
+				if (args.Member is PropertyDescriptor) {
+					var propDesc = args.Member as PropertyDescriptor;
+					object newVal = propDesc.GetValue (args.Component);
+					UpdateControlTag (args.Component as IComponent, args.Member, newVal);
+				}
+			}
+		}
+
+		#region DesignerSerializer wrapper
+
+		public void UpdateControlTag (IComponent comp, MemberDescriptor member, object newVal)
+		{
+			using (DesignerTransaction trans = CreateTransaction ("Updating component's tag: " + comp.Site.Name)) {
+				designerSerializer.UpdateTag (comp, member, newVal);
+				if (!InTransaction)
+					trans.Commit ();
+			}
+		}
+
+		public void UpdateControl (string id, string property, string newValue)
+		{
+			using (CreateTransaction ("Updating component: " + id)) {
+
+			}
+		}
+
+		public void RemoveControl (IComponent comp)
+		{
+			using (DesignerTransaction trans = CreateTransaction ("Removing component: " + comp.Site.Name)) {
+				designerSerializer.RemoveControlTag (comp.Site.Name);
+				Container.Remove (comp);
+				trans.Commit ();
+			}
+		}
+
+		public void RemoveSelectedControls ()
+		{
+			using (DesignerTransaction trans = CreateTransaction ("Removing selected components")) {
+				var selServ = GetService (typeof (ISelectionService)) as ISelectionService;
+				if (selServ == null)
+					throw new Exception ("Could not get selection service");
+	
+				ArrayList selectedItems = new ArrayList (selServ.GetSelectedComponents ());
+	
+				for (int i = selectedItems.Count - 1; i >= 0; i--) {
+					var comp = selectedItems[i] as IComponent;
+
+					if (RootComponent.Equals (comp))
+						continue;
+
+					designerSerializer.RemoveControlTag (comp.Site.Name);
+					Container.Remove (comp);
+				}
+				trans.Commit ();
+			}
+		}
+
+		#endregion
 
 		#region Wrapping parent ServiceContainer
 
@@ -367,72 +577,14 @@ namespace AspNetEdit.Editor.ComponentModel
 				//and the container
 				container.Dispose ();
 
+				rootDocument.Destroy ();
+
 				disposed = true;
 			}
 		}
 
 		#endregion
 
-
-		public void NewFile ()
-		{
-			if (activated || RootComponent != null)
-				throw new InvalidOperationException ("You must reset the host before loading another file.");
-			loading = true;
-
-			this.Container.Add (new WebFormPage ());
-			this.rootDocument = new Document ((Control)rootComponent, this, "New Document");
-
-			loading = false;
-			OnLoadComplete ();
-		}
-
-		public void Load (Stream file, string fileName)
-		{
-			using (TextReader reader = new StreamReader (file))
-			{
-				Load (reader.ReadToEnd (), fileName);
-			}
-		}
-		
-		public void Load (string document, string fileName)
-		{
-			if (activated || RootComponent != null)
-				throw new InvalidOperationException ("You must reset the host before loading another file.");
-			loading = true;
-
-			this.Container.Add (new WebFormPage());
-			this.rootDocument = new Document ((Control)rootComponent, this, document, fileName);
-
-			loading = false;
-			OnLoadComplete ();
-		}
-
-		public void Reset ()
-		{
-			//container automatically destroys all children when this happens
-			if (rootComponent != null)
-				DestroyComponent (rootComponent);
-
-			if (activated) {
-				OnDeactivated ();
-				this.activated = false;
-			}
-		}
-
-		public void SaveDocumentToFile (Stream file)
-		{
-			StreamWriter writer = new StreamWriter (file);
-
-			writer.Write(RootDocument.PersistDocument ());
-			writer.Flush ();
-		}
-		
-		public string PersistDocument ()
-		{
-			return RootDocument.PersistDocument ();
-		}
-		
 		/*TODO: Some .NET 2.0 System.Web.UI.Design.WebFormsRootDesigner methods
 		public abstract void RemoveControlFromDocument(Control control);
 		public virtual void SetControlID(Control control, string id);

@@ -51,7 +51,7 @@ namespace AspNetEdit.Integration
 		
 		public bool CanAttachTo (IViewContent content)
 		{
-			if (content.GetContent (typeof(MonoDevelop.Ide.Gui.Content.IEditableTextBuffer)) == null)
+			if (content.GetContent <MonoDevelop.Ide.Gui.Content.IEditableTextBuffer> () == null)
 				return false;
 			
 			switch (AspNetAppProject.DetermineWebSubtype (content.IsUntitled? content.UntitledName : content.ContentName)) {

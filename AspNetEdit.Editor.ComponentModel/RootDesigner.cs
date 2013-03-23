@@ -45,20 +45,20 @@ namespace AspNetEdit.Editor.ComponentModel
 		public RootDesigner (IComponent component)
 		{
 			System.Diagnostics.Trace.WriteLine ("Creating RootDesigner");
-			view = RootDesignerView.GetInstance (component.Site.GetService (typeof (IDesignerHost)) as IDesignerHost);
+			view = new RootDesignerView (component.Site.GetService (typeof (IDesignerHost)) as IDesignerHost);
 		}
 
 		#region IRootDesigner Members
 
 		public object GetView (ViewTechnology technology) {
-			if (technology == ViewTechnology.Passthrough)
+			if (technology == ViewTechnology.Default)
 				return view;
 			else return null;
 		}
 
 		public ViewTechnology[] SupportedTechnologies {
 			get {
-				ViewTechnology[] tech = { ViewTechnology.Passthrough };
+				ViewTechnology[] tech = { ViewTechnology.Default };
 				return tech;
 			}
 		}

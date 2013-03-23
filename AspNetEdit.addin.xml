@@ -10,7 +10,6 @@
 	
 	<Runtime>
 		<Import assembly = "AspNetEdit.dll"/>
-		<Import file     = "aspdesigner.jar"/>
 	</Runtime>
 
 	<Dependencies>
