@@ -4,7 +4,9 @@ PACKAGE=aspnetedit
 prefix=/usr/local
 config=DEBUG
 configurations=" RELEASE DEBUG"
-required_packages=" mono-addins;0.3 monodevelop-core-addins;2.7 gecko-sharp-2.0;0.10 gtk-sharp-2.0;2.12.8 monodevelop;2.7"
+# required_packages=" mono-addins;0.3 monodevelop-core-addins;2.7 webkit-sharp-1.1;0.3 gtk-sharp-2.0;2.12.8 monodevelop;2.7"
+# TODO: add a requirement for webkit-sharp
+required_packages=" mono-addins;0.3 monodevelop-core-addins;2.7 gtk-sharp-2.0;2.12.8 monodevelop;2.7"
 
 usage ()
 {

@@ -180,7 +180,7 @@ namespace AspNetEdit.Integration
 			
 			Gtk.Application.Invoke (delegate {
 				IdeApp.Workbench.OpenDocument (
-					new FilePath (nonDesignerClass.ParsedFile.FileName),
+					new FilePath (nonDesignerClass.UnresolvedFile.FileName),
 					lineNumber, 
 					1,
 					MonoDevelop.Ide.Gui.OpenDocumentOptions.Default);

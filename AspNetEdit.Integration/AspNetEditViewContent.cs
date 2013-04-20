@@ -42,6 +42,7 @@ using MonoDevelop.Xml.StateEngine;
 
 using AspNetEdit.Editor;
 using AspNetEdit.Editor.ComponentModel;
+using AspNetEdit.Tools;
 using MonoDevelop.Components.Commands;
 using MonoDevelop.Ide.Commands;
 using MonoDevelop.Ide.Gui.Content;
@@ -115,12 +116,14 @@ namespace AspNetEdit.Integration
 
 		bool IsInCurrentViewContent ()
 		{
+			var viewContent = this as IBaseViewContent;
+			var currView = IdeApp.Workbench.ActiveDocument.ActiveView;
 			return IdeApp.Workbench.ActiveDocument.ActiveView.Equals (this as IBaseViewContent);
 		}
 
 		public override void Selected ()
 		{
-			if (blockSelected || !IsInCurrentViewContent ())
+			if (blockSelected || IsInCurrentViewContent ())
 				return;
 
 			if (activated)
@@ -329,16 +332,16 @@ namespace AspNetEdit.Integration
 			
 			bool isRunAtServer = false;
 			string id = string.Empty;
-			XName runatName = new XName ("runat");
-			XName idName = new XName ("id");
+			//XName runatName = new XName ("runat");
+			//XName idName = new XName ("id");
 			
 			foreach (XAttribute attr in el.Attributes) {
-				if (attr.Name.ToLower () == runatName) {
+				if (XDocumentHelper.IsXNameEqualCI (attr.Name, "runat")) {
 					if (attr.Value == "server")
 						isRunAtServer = true;
 					else
 						break;
-				} else if (attr.Name.ToLower () == idName) {
+				} else if (XDocumentHelper.IsXNameEqualCI (attr.Name, "id")) {
 					id = attr.Value;
 				}
 			}

@@ -40,10 +40,10 @@ namespace AspNetEdit.Tools
 		/// </param>
 		public static string GetAttributeValueCI (XAttributeCollection attributes, string key)
 		{
-			XName nameKey = new XName (key.ToLowerInvariant ());
+			//XName nameKey = new XName (key.ToLowerInvariant ());
 
 			foreach (XAttribute attr in attributes) {
-				if (attr.Name.ToLower () == nameKey)
+				if (IsXNameEqualCI (attr.Name, key))
 					return attr.Value;
 			}
 			return String.Empty;
@@ -63,10 +63,10 @@ namespace AspNetEdit.Tools
 		/// </param>
 		public static XAttribute GetAttributeCI (XAttributeCollection attributes, string key)
 		{
-			XName nameKey = new XName (key.ToLowerInvariant ());
+			//XName nameKey = new XName (key.ToLowerInvariant ());
 
 			foreach (XAttribute attr in attributes) {
-				if (attr.Name.ToLower () == nameKey)
+				if (IsXNameEqualCI (attr.Name, key))
 					return attr;
 			}
 			return null;
@@ -83,12 +83,17 @@ namespace AspNetEdit.Tools
 		/// </param>
 		public static bool IsRunAtServer (XElement el)
 		{
-			XName runat = new XName ("runat");
+			//XName runat = new XName ("runat");
 			foreach (XAttribute a  in el.Attributes) {
-				if ((a.Name.ToLower () == runat) && (a.Value.ToLower () == "server"))
+				if (IsXNameEqualCI (a.Name, "runat") && (a.Value.ToLower () == "server"))
 					return true;
 			}
 			return false;
+		}
+
+		public static bool IsXNameEqualCI (XName el, string name)
+		{
+			return (bool) (el.Name.ToLowerInvariant () == name.ToLowerInvariant ());
 		}
 	}
 }
